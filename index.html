@@ -475,6 +475,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
       <div class="srow stack"><label for="apiKey">API key</label>
         <input type="password" id="apiKey" autocomplete="off" placeholder="Paste your key"></div>
       <div class="srow"><button class="send" id="testBtn">Save &amp; test</button><small id="testOut"></small></div>
+      <div class="srow stack"><span>AI requests today (this phone)</span><small id="usageOut" class="hint" style="margin:4px 0 0"></small></div>
       <div class="srow"><span>First meeting</span><button class="ghost" id="redoOb">Do it again</button></div>
       <div class="srow"><label for="level">My level</label>
         <select id="level"><option value="A1">Beginner (A1)</option><option value="A1+">Beginner+ (A1+)</option><option value="A2">Elementary (A2)</option></select></div>
@@ -530,7 +531,17 @@ const SAURYA_WORDS = ["Tee","Café","bitte","oder","hallo","Zucker","Milch","mit
 
 const EN = {"Tee":"tea","Café":"café","bitte":"please","oder":"or","hallo":"hello","Zucker":"sugar","Milch":"milk","mit":"with","danke":"thank you","Wasser":"water","Kekse":"biscuits","und":"and","tschüss":"bye","ich bin":"I am","ich komme aus":"I come from","Tokio":"Tokyo","und du":"and you?","freut mich":"nice to meet you","mein":"my","dein":"your","Mama":"mum","Papa":"dad","Schwester":"sister","Bruder":"brother","Tochter":"daughter","das ist":"this is","ist":"is","lustig":"funny","nett":"nice","gut":"good","schön":"beautiful","guck mal":"look!","hungrig":"hungry","durstig":"thirsty","satt":"full (not hungry)","müde":"tired","billig":"cheap","lecker":"tasty","das Restaurant":"the restaurant","die":"the (feminine)","das":"the (neuter)","Wurst":"sausage","Fleisch":"meat","Salat":"salad","Käse":"cheese","Brot":"bread","Kaffee":"coffee","trinken":"to drink","alt":"old","groß":"big","klein":"small","Stadt":"city","wo ist":"where is","hier":"here","Bahnhof":"train station","links":"left","rechts":"right","da drüben":"over there","Bäckerei":"bakery","U-Bahn":"underground train","Bibliothek":"library","Toilette":"toilet","Imbiss":"snack bar","geöffnet":"open","Mann":"man","Frau":"woman","Lehrer":"teacher (male)","Lehrerin":"teacher (female)","Bäcker":"baker (male)","Bäckerin":"baker (female)","Verkäufer":"salesman","Verkäuferin":"saleswoman","Musiker":"musician","ich":"I","du":"you (one friend)","sie":"she","ihr":"you (several friends)","wir":"we","sind":"are (we / they)","bist":"are (you)","ja":"yes","nein":"no","dir":"to you","mir":"to me","sportlich":"sporty","schwimmen":"to swim","joggen":"to jog","wandern":"to hike","spielen":"to play","Fußball":"football","Sport":"sport","Musik":"music","oft":"often","nie":"never","sehr":"very","laut":"loud","draußen":"outside","brauchen":"to need","gehen":"to go","nach Hause":"(going) home","Handy":"mobile phone","Entschuldigung":"excuse me","wirklich":"really","bin":"am","nicht":"not","was":"what","wo":"where","wie":"how","heute":"today","essen":"to eat","haben":"to have","Name":"name"};
 
-const TOPICS = ["what you drank this morning (tea or coffee)","the weather today","your family","your weekend","food you like","sports you play or watch","music","your city","a café you like","travel and cities you know (Paris, London, Tokio, Berlin)","being tired, hungry or thirsty","your phone","going for a walk or hike","a restaurant visit","your work day","friends","a party","the park and the zoo","going home by taxi or U-Bahn","bread and the bakery","cricket and football","festivals like Diwali","your favourite place","yoga and staying fit","something funny that happened","what is open or closed today","a teacher you remember","the library and books","cheap vs. expensive things","noise in the city"];
+// Everyday topics, each tied to a topic area of the word bank (see vocab.js) so Lena can pick one where your cold words belong.
+const TOPICS = [
+  ["what you drank this morning (tea or coffee)", "f"], ["the weather today", "n"], ["your family", "p"], ["your weekend", "v"], ["food you like", "f"],
+  ["sports you play or watch", "v"], ["music", "v"], ["your city", "c"], ["a café you like", "f"], ["travel and cities you know (Paris, London, Tokio, Berlin)", "t"],
+  ["being tired, hungry or thirsty", "b"], ["your phone and your home", "h"], ["going for a walk or hike", "v"], ["a restaurant visit", "f"], ["your work day", "w"],
+  ["friends", "p"], ["a party", "v"], ["the park and the zoo", "c"], ["going home by taxi or U-Bahn", "t"], ["bread and the bakery", "f"],
+  ["cricket and football", "v"], ["festivals like Diwali", "m"], ["your favourite place", "c"], ["yoga and staying fit", "b"], ["something funny that happened", "m"],
+  ["what is open or closed today", "c"], ["a teacher you remember", "w"], ["the library and books", "w"], ["cheap vs. expensive things", "s"], ["noise in the city", "c"],
+  ["shopping for groceries or clothes", "s"], ["your home and your room", "h"], ["how you feel today", "m"], ["a visit to the doctor", "b"], ["the seasons, the mountains or the sea", "n"],
+  ["your daily routine: getting up, eating, sleeping", "e"], ["your plans for next week", "e"], ["describing someone you know", "d"], ["a trip by train or plane", "t"], ["something you are learning", "w"]
+].map(([t, tag]) => ({ t, tag }));
 
 const STORIES = [
   {de:"Die Bremer Stadtmusikanten", en:"The Town Musicians of Bremen"},
@@ -558,7 +569,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -592,10 +603,10 @@ const store = {
 const DEFAULTS = {
   provider: "gemini", key: "", level: "A1", voice: "", rate: 0.9, autoSpeak: true, autoSend: false, autoListen: false, theme: "light",
   seeded: false, recentStories: [], model: "", adv: false, added: [], mistakes: [], days: [], sessions: 0, recentTopics: [],
-  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false
+  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}
 };
 const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
-const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories"];
+const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests"];
 let userRef = null, syncTimer = null;
 // Everything that matters is saved to the account (Firestore), so uninstalling or changing phones loses nothing.
 const persist = k => { store.set(k, S[k]); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
@@ -644,7 +655,7 @@ function nextNewWords(n = 6){
   const known = new Set(allWords().map(w => w.toLowerCase()));
   const max = (LEVEL_NUM[S.level] || 1) + 1;
   return BANK.filter(b => !known.has(b.w.toLowerCase()) && b.lvl <= max && b.tag !== "g")
-    .map(b => [b, importance(b.w) + Math.random() * 10]).sort((a, c) => c[1] - a[1]).slice(0, n).map(x => x[0]);
+    .map(b => [b, importance(b.w) + sameArea(b.w) + Math.random() * 10]).sort((a, c) => c[1] - a[1]).slice(0, n).map(x => x[0]);
 }
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
@@ -700,11 +711,33 @@ $("topicInput").onkeydown = e => { if (e.key === "Enter") $("topicBtn").click();
 $("backBtn").onclick = () => { stopAll(); show("home"); };
 $("wordsBtn").onclick = () => { renderWords(); show("words", "Words"); };
 $("setBtn").onclick = () => { renderSettings(); show("settings", "Settings"); };
-function pickTopic(){
-  const pool = TOPICS.filter(t => !S.recentTopics.includes(t));
-  const t = (pool.length ? pool : TOPICS)[Math.floor(Math.random() * (pool.length || TOPICS.length))];
-  S.recentTopics = [t, ...S.recentTopics].slice(0, 10); persist("recentTopics"); return t;
+// Topic steering: score each topic area by how much useful practice it offers right now (important words that have gone
+// cold, plus the most useful new words at your level), add a boost for areas you like talking about, then pick among the best.
+function areaNeed(tag){
+  const max = (LEVEL_NUM[S.level] || 1) + 1, known = new Set(allWords().map(w => w.toLowerCase()));
+  const needs = BANK.filter(b => b.tag === tag && b.lvl <= max).map(b => known.has(b.w.toLowerCase()) ? importance(b.w) * (1 - warmth(b.w) / 100) : importance(b.w) * 0.6);
+  needs.sort((a, b) => b - a); const top = needs.slice(0, 10);
+  return top.length ? top.reduce((a, b) => a + b, 0) / top.length : 0;
 }
+function interestBoost(tag){ const n = (S.interests || {})[tag] || 0; return Math.min(25, 8 * Math.log2(1 + n)); }
+function topicScores(){
+  const areas = {}; TOPICS.forEach(t => { if (!(t.tag in areas)) areas[t.tag] = areaNeed(t.tag) + interestBoost(t.tag); });
+  return areas;
+}
+function pickTopic(){
+  const areas = topicScores();
+  const pool = TOPICS.filter(t => !S.recentTopics.includes(t.t));
+  const ranked = (pool.length ? pool : TOPICS).map(t => [t, areas[t.tag] + Math.random() * 12]).sort((a, b) => b[1] - a[1]);
+  const t = ranked[Math.floor(Math.random() * Math.min(3, ranked.length))][0];
+  S.recentTopics = [t.t, ...S.recentTopics].slice(0, 12); persist("recentTopics"); return t;
+}
+// What you talk about tells Lena what you like: every word you use counts toward its topic area.
+function noteInterest(words){
+  let n = 0; S.interests = S.interests || {};
+  words.forEach(w => { const b = bankOf(w); if (b && b.tag && b.tag !== "g" && b.tag !== "x") { S.interests[b.tag] = (S.interests[b.tag] || 0) + 1; n++; } });
+  if (n) persist("interests");
+}
+const sameArea = w => session && session.tag && (bankOf(w) || {}).tag === session.tag ? 30 : 0;
 
 /* ---------- voice out ---------- */
 let voices = [];
@@ -895,6 +928,9 @@ async function friendlyHttpError(res){
 // Fast models first, always in this order: a chat needs replies in seconds. If one is busy, slow or retired, try the next.
 // The two Flash-Lite models have separate free daily limits (500 each); Flash is a slow last resort (20 a day).
 const GEMINI_CHAIN = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3.8-flash"];
+// Requests made today from this phone, per model (the free key's daily limits are per model).
+function countRequest(model){ const k = "usage:" + today(), u = store.get(k, {}); u[model] = (u[model] || 0) + 1; store.set(k, u);
+  try { Object.keys(localStorage).filter(x => x.startsWith("lena:usage:") && x !== "lena:" + k).forEach(x => localStorage.removeItem(x)); } catch {} }
 function withTimeout(signal, ms){
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms);
   if (signal) { if (signal.aborted) ctl.abort("user"); else signal.addEventListener("abort", () => ctl.abort("user"), { once: true }); }
@@ -931,6 +967,7 @@ async function callLLM(system, messages, signal, maxTokens = 1500){
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(S.key)}`, {
           method: "POST", signal: to.signal, headers: { "content-type": "application/json" }, body
         });
+        if (res.status !== 429) countRequest(model);
         if (res.ok) {
           const j = await res.json();
           const text = (j.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
@@ -1082,7 +1119,7 @@ function finalizeChat(){
   if (fresh.length) { persist("en"); persist("stats"); }
   return { mine, fixes: fx.length, words: n };
 }
-function openTalk(){ unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } if (S.chat && S.chat.session) resumeChat(); else startChat({ title: "Einfach reden", mode: "free", text: pickTopic() }); }
+function openTalk(){ unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } if (S.chat && S.chat.session) resumeChat(); else { const t = pickTopic(); startChat({ title: "Einfach reden", mode: "free", text: t.t, tag: t.tag }); } }
 function resumeChat(){
   const c = S.chat; stopAll(); retry = null;
   session = c.session; turns = (c.turns || []).slice(); fixes = (c.fixes || []).slice(); newWords = (c.newWords || []).slice(); chatLog = (c.log || []).slice();
@@ -1206,13 +1243,19 @@ function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
   $("hear").value = S.hear; $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
-  renderVoiceList(); renderAccount(); applyTheme(S.theme);
+  renderVoiceList(); renderAccount(); applyTheme(S.theme); renderUsage();
 }
 $("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
 $("apiKey").onchange = () => { S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model"); };
 $("level").onchange = () => { S.level = $("level").value; persist("level"); };
 $("voice").onchange = () => { S.voice = $("voice").value; persist("voice"); };
 $("rate").oninput = () => { S.rate = +$("rate").value; $("rateOut").textContent = S.rate.toFixed(2) + "×"; persist("rate"); };
+function renderUsage(){
+  const u = store.get("usage:" + today(), {}), total = Object.values(u).reduce((a, b) => a + b, 0);
+  const names = { "gemini-flash-lite-latest": "3.5 Flash-Lite", "gemini-3.5-flash-lite": "3.5 Flash-Lite", "gemini-3.1-flash-lite": "3.1 Flash-Lite", "gemini-3.8-flash": "3.8 Flash" };
+  const by = {}; Object.entries(u).forEach(([m, n]) => { const k = names[m] || m; by[k] = (by[k] || 0) + n; });
+  $("usageOut").textContent = total ? `${total} today — ${Object.entries(by).map(([m, n]) => `${m} ${n}`).join(", ")}. The free key allows about 500 a day on each Flash-Lite model (20 on Flash), shared by everyone using it.` : "None yet today. The free key allows about 500 a day on each Flash-Lite model, shared by everyone using it.";
+}
 $("hear").onchange = () => { S.hear = $("hear").value; persist("hear"); };
 $("autoSpeak").onchange = () => { S.autoSpeak = $("autoSpeak").checked; persist("autoSpeak"); };
 $("autoSend").onchange = () => { S.autoSend = $("autoSend").checked; persist("autoSend"); };
@@ -1267,12 +1310,14 @@ function renderHeat(barId, legendId){
   $(legendId).innerHTML = order.map(k => `<span style="--c:${HEAT[k].c}">${HEAT[k].label} ${h[k]}</span>`).join("");
 }
 function focusWords(n = 8){
-  const scored = allWords().filter(w => (bankOf(w) || {}).tag !== "g").map(w => [w, importance(w) * (1 - warmth(w) / 100) + Math.random() * 15]).sort((a, b) => b[1] - a[1]);
+  const scored = allWords().filter(w => (bankOf(w) || {}).tag !== "g").map(w => [w, importance(w) * (1 - warmth(w) / 100) + sameArea(w) + Math.random() * 15]).sort((a, b) => b[1] - a[1]);
   return scored.slice(0, n).map(x => x[0]);
 }
 function trackUsage(learner, lena){
   let changed = false;
-  (Array.isArray(learner) ? learner : []).forEach(u => { const w = entryFor(u && u.w); if (!w) return; bump(w, "s"); bump(w, u.ok === false ? "x" : "c"); changed = true; });
+  const used = [];
+  (Array.isArray(learner) ? learner : []).forEach(u => { const w = entryFor(u && u.w); if (!w) return; bump(w, "s"); bump(w, u.ok === false ? "x" : "c"); used.push(w); changed = true; });
+  noteInterest(used);
   (Array.isArray(lena) ? lena : []).forEach(x => { const w = entryFor(x); if (w) { bump(w, "l"); changed = true; } });
   if (changed) persist("stats");
 }
