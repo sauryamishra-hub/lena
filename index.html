@@ -60,7 +60,7 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .switch.on i{background:var(--gold-ink)} .switch.on i::after{left:14px;background:var(--gold)}
 
 /* one-button home */
-.home1{flex:1;display:grid;grid-template-rows:auto 1fr auto;position:relative;padding-block:28px 26px;min-height:0}
+.home1{flex:1;display:grid;grid-template-rows:auto 1fr auto auto;row-gap:10px;position:relative;padding-block:28px 18px;min-height:0;touch-action:pan-y}
 .home1 .bars{position:absolute;left:0;top:0;bottom:0;width:7px;display:flex;flex-direction:column}
 .home1 .bars i{flex:1}
 .home1 .bars i:nth-child(1){background:#111} .home1 .bars i:nth-child(2){background:var(--accent)} .home1 .bars i:nth-child(3){background:var(--gold)}
@@ -71,10 +71,13 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .disc::after{content:"";position:absolute;right:-2%;bottom:4%;width:22%;height:22%;background:var(--gold)}
 .disc svg{position:relative;z-index:1;width:26%;height:26%}
 .disc:active::before{transform:scale(.94)}
-.foot1{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.foot1 .sub-en{margin:0;font-size:16px;font-weight:500}
-.storylink{background:transparent;border:0;border-bottom:2px solid var(--gold);padding:2px 0;font-weight:600;font-size:16px;color:var(--ink)}
-.setup{grid-column:1/-1}
+.tapcap{text-align:center;margin:0;font-size:16px;font-weight:500}
+.foot1{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px;padding-top:6px}
+.storylink{background:transparent;border:0;padding:0 2px 2px;font-weight:600;font-size:16px;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:0;border-bottom:2px solid var(--gold)}
+.storylink .up{font-size:14px;line-height:1;color:var(--accent)}
+.edge{background:transparent;border:0;padding:4px 0;font-size:13px;font-weight:600;color:var(--muted);justify-self:start}
+#toAdv{justify-self:end}
+.setup{justify-self:center}
 .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding-block:24px}
 .center .sub-en{color:var(--muted);margin:0}
 .gate-logo{width:104px;height:104px;background:#fff;border:var(--bw) solid var(--line)}
@@ -221,6 +224,26 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .invite-list{display:flex;flex-direction:column}
 .invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--soft-line);overflow-wrap:anywhere}
 .toggle{display:none}
+.newshead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.newshead .lead{margin:0 0 6px}
+.nsec{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.nsec::after{content:"";flex:1;height:2px;background:var(--line)}
+.nitem{background:var(--surface);border:var(--bw) solid var(--line);padding:14px 14px 12px;margin-bottom:12px;position:relative}
+.nitem.india{border-left:5px solid var(--gold)} .nitem.world{border-left:5px solid var(--accent)}
+.nitem h3{margin:0 0 6px;font-size:20px;line-height:1.25;font-weight:700}
+.nitem .nbody{font-size:17px;line-height:1.5}
+.nitem .nsrc{font-size:12px;color:var(--muted);margin-top:8px}
+.nitem .nsrc a{color:var(--muted)}
+.obflag{display:flex;width:72px;height:10px;margin:8px 0 18px}.obflag i{flex:1}.obflag i:nth-child(1){background:#111}.obflag i:nth-child(2){background:var(--accent)}.obflag i:nth-child(3){background:var(--gold)}
+.obtitle{font-size:44px;letter-spacing:-.03em}
+.obopts{display:flex;flex-direction:column;gap:10px}
+.obopt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:var(--bw) solid var(--line);background:var(--surface);padding:14px 16px;color:var(--ink)}
+.obopt b{font-size:19px} .obopt span{color:var(--muted);font-size:14px}
+.obopt:active{background:var(--gold-soft)}
+.obword{font-size:40px;font-weight:700;letter-spacing:-.02em;margin:10px 0 4px;overflow-wrap:anywhere}
+.obbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.obbtns button{padding:14px;font-size:17px}
+.obres{font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--accent)}
 .banklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
 .bw{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:var(--bw) solid var(--line);background:var(--surface);padding:7px 10px;color:var(--ink)}
 .bw span{font-weight:600;font-size:15px}
@@ -258,10 +281,12 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <button class="disc" id="goBtn" aria-label="Start talking with Lena">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
     </button>
+    <p class="sub-en tapcap">Tap and start talking</p>
+    <button class="send setup" id="setupBtn" hidden>Set up Lena's key first</button>
     <div class="foot1">
-      <p class="sub-en">Tap and start talking</p>
-      <button class="storylink" id="storyBtn">Tell me a story</button>
-      <button class="send setup" id="setupBtn" hidden>Set up Lena's key first</button>
+      <button class="edge" id="toNews" aria-label="Open the news"><span aria-hidden="true">‹</span> Nachrichten</button>
+      <button class="storylink" id="storyBtn"><span class="up" aria-hidden="true">︿</span>Tell me a story</button>
+      <button class="edge" id="toAdv" aria-label="Open Advanced">Advanced <span aria-hidden="true">›</span></button>
     </div>
   </main>
 
@@ -284,7 +309,8 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="grid" id="scenes"></div>
     <p class="label">Geschichten · folk tales</p>
     <div class="grid" id="stories"></div>
-    <button class="rowlink" id="wordsBtn">My words &amp; mistakes <span aria-hidden="true">›</span></button>
+    <button class="rowlink" id="newsBtn">Nachrichten · today's news in simple German <span aria-hidden="true">›</span></button>
+    <button class="rowlink" id="wordsBtn" style="margin-top:8px">My words &amp; mistakes <span aria-hidden="true">›</span></button>
     <div class="soon"><span>Characters · Round table<small>Talk with different Germans, or with a whole table at once.</small></span><em>Bald</em></div>
   </main>
 
@@ -332,6 +358,35 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 
   <main class="scroll pad" id="summary" hidden></main>
 
+  <main class="scroll pad" id="news" hidden>
+    <div class="newshead"><p class="lead" id="newsDate" style="font-weight:600;color:var(--ink)"></p><button class="ghost" id="newsRefresh">Refresh</button></div>
+    <p class="hint" style="margin:-6px 0 14px">Today's news, rewritten in simple German for your level. Tap any word for its meaning.</p>
+    <div id="newsBody"></div>
+  </main>
+
+  <main class="scroll pad" id="onboard" hidden>
+    <div id="ob1">
+      <div class="obflag" aria-hidden="true"><i></i><i></i><i></i></div>
+      <h2 class="obtitle" lang="de">Willkommen!</h2>
+      <p class="lead">Before your first chat, Lena would like to know where you're starting from. It takes about two minutes, and there are no wrong answers.</p>
+      <p class="label">Have you learned German before?</p>
+      <div class="obopts">
+        <button class="obopt" data-ans="never"><b>Never</b><span>I'm starting from zero</span></button>
+        <button class="obopt" data-ans="few"><b>A few words</b><span>Hallo, danke, a bit more</span></button>
+        <button class="obopt" data-ans="chat"><b>I can chat a little</b><span>Simple sentences are fine</span></button>
+      </div>
+      <button class="edge" id="obSkip" style="margin-top:22px">Skip for now</button>
+    </div>
+    <div id="ob2" hidden>
+      <div class="vhead"><span id="obProg">1 / 24</span><span>Do you know this word?</span></div>
+      <div class="vbar"><i id="obBar" style="width:0"></i></div>
+      <div class="vcard"><div class="label" style="margin:0">German</div><div class="obword" id="obWord" lang="de"></div></div>
+      <p class="hint" style="text-align:center;margin:10px 0 16px">Answer honestly. A few of these words are made up.</p>
+      <div class="obbtns"><button class="ghost" id="obNo">Not sure</button><button class="send" id="obYes">I know it</button></div>
+    </div>
+    <div id="ob3" hidden></div>
+  </main>
+
   <main class="scroll pad" id="vocab" hidden>
     <div id="vPlay">
       <div class="vhead"><span id="vProg">1 / 10</span><span id="vScore">0 richtig</span></div>
@@ -369,6 +424,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
       <div class="srow stack"><label for="apiKey">API key</label>
         <input type="password" id="apiKey" autocomplete="off" placeholder="Paste your key"></div>
       <div class="srow"><button class="send" id="testBtn">Save &amp; test</button><small id="testOut"></small></div>
+      <div class="srow"><span>First meeting</span><button class="ghost" id="redoOb">Do it again</button></div>
       <div class="srow"><label for="level">My level</label>
         <select id="level"><option value="A1">Beginner (A1)</option><option value="A1+">Beginner+ (A1+)</option><option value="A2">Elementary (A2)</option></select></div>
     </div>
@@ -441,7 +497,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.7.0";
+const VERSION = "1.8.0";
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -468,9 +524,9 @@ const S = {
   voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
   autoListen: store.get("autoListen",false), seeded: store.get("seeded",false), recentStories: store.get("recentStories",[]), model: store.get("model",""), adv: store.get("adv",false),
   added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[]),
-  stats: store.get("stats",{}), en: store.get("en",{})
+  stats: store.get("stats",{}), en: store.get("en",{}), onboarded: store.get("onboarded",false), placement: store.get("placement",null)
 };
-const SYNCED = ["autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
+const SYNCED = ["onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
 let userRef = null, syncTimer = null;
 const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
 function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
@@ -513,16 +569,17 @@ function nextNewWords(n = 6){
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
 /* ---------- views ---------- */
-const VIEWS = ["gate","simple","home","chat","words","summary","settings","vocab"];
+const VIEWS = ["gate","simple","home","chat","words","summary","settings","vocab","news","onboard"];
 let current = "home";
 function show(v, title){
+  if (v === "home" && needsOnboarding()) v = "onboard";
   if (v === "home" && !S.adv) v = "simple";
   current = v;
   VIEWS.forEach(x => $(x).hidden = x !== v);
   const isHome = v === "home" || v === "simple";
   $("composer").hidden = v !== "chat";
   $("simpleBar").hidden = S.adv; $("advBar").hidden = !S.adv;
-  $("backBtn").hidden = isHome || v === "gate";
+  $("backBtn").hidden = isHome || v === "gate" || v === "onboard";
   hidePop();
   $("endBtn").hidden = v !== "chat";
   $("setBtn").hidden = !(S.adv && v === "home");
@@ -634,12 +691,13 @@ function systemPrompt(){
     ? `FREE CHAT. Start by bringing up this topic naturally: ${session.text}. Let the chat drift wherever the learner takes it, like two friends talking. If it stalls, move to a new everyday topic.`
     : session.mode === "story"
     ? `STORY TIME: Tell the German folk tale "${session.text}" in your own very simple words, in small parts of 2–3 short sentences. Begin with one line about where the story comes from. After each part, stop and ask the learner one easy question (about the story, or what they think happens next). When they answer, react briefly to what they said, then continue. Finish in about 6–8 parts, then chat with the learner about the story.`
+    : session.mode === "intro" ? session.text
     : `ROLE-PLAY: ${session.text}`;
   return `You are Lena, a warm, curious German friend helping an adult learner from India build speaking fluency through natural conversation. They may be a complete beginner or may already know some German from elsewhere; adapt to what they can actually say. This is not a structured course: the learner picks up words by using them.
 
 ${ctx}
 
-LEVEL: ${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}
+LEVEL: ${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}${beginnerSupport()}
 
 WORDS THE LEARNER KNOWS: ${allWords().join(", ")}
 
@@ -1056,6 +1114,180 @@ $("vNext").onclick = vNext;
 $("vocabBtn").onclick = () => { if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startVocab(); };
 $("drillCold").onclick = () => { if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startVocab(); };
 
+/* ---------- first meeting: find out where a new learner is starting from ---------- */
+function needsOnboarding(){
+  if (S.onboarded) return false;
+  if (S.sessions > 0 || S.added.length > 0) { S.onboarded = true; persist("onboarded"); return false; }
+  return true;
+}
+function beginnerSupport(){
+  const few = allWords().length < 60, early = S.sessions < 5;
+  if (!(few && early)) return "";
+  return `\nBEGINNER SUPPORT: this learner knows very few words. Keep every sentence very short, add a short English hint in brackets after anything new, and teach at most one new word at a time: say it, give its meaning, invite them to say it, then ask a tiny question they can answer with it.`;
+}
+// Made-up words that look German. Saying you know one means you were guessing.
+const FAKES = ["Brummelkiste", "flarten", "Wöschel", "Kalumpe", "gristig", "verlunden", "Pfanzel", "spöckeln", "Gehnis", "Trautsche", "malfern", "Knolpe"];
+let OB = null;
+function startOnboarding(){ stopAll(); OB = { ans: null }; $("ob1").hidden = false; $("ob2").hidden = true; $("ob3").hidden = true; show("onboard", "Willkommen"); }
+function finishOnboarding(goChat){
+  S.onboarded = true; persist("onboarded");
+  if (goChat && S.key) startIntroChat(); else if (goChat) { renderSettings(); show("settings", "Settings"); } else show("home");
+}
+function sampleBand(lo, hi, n){
+  const pool = BANK.filter(b => b.rank > lo && b.rank <= hi && b.tag !== "g" && b.w.toLowerCase() !== String(b.en).toLowerCase() && !/ /.test(b.w));
+  return pool.sort(() => Math.random() - .5).slice(0, n);
+}
+$("onboard").addEventListener("click", e => {
+  const o = e.target.closest("[data-ans]"); if (!o) return;
+  OB = OB || {}; OB.ans = o.dataset.ans;
+  if (OB.ans === "never") { S.level = "A1"; persist("level"); S.placement = { est: 0, level: "A1", ans: "never", at: Date.now() }; persist("placement"); showObResult(0, "A1"); return; }
+  const items = [
+    ...sampleBand(0, 200, 6).map(b => ({ b, band: 0 })),
+    ...sampleBand(200, 600, 6).map(b => ({ b, band: 1 })),
+    ...sampleBand(600, BANK.length, 6).map(b => ({ b, band: 2 })),
+    ...FAKES.sort(() => Math.random() - .5).slice(0, 6).map(w => ({ fake: w }))
+  ].sort(() => Math.random() - .5);
+  OB.items = items; OB.i = 0; OB.res = [];
+  $("ob1").hidden = true; $("ob2").hidden = false; obCard();
+});
+$("obSkip").onclick = () => finishOnboarding(false);
+function obCard(){
+  const it = OB.items[OB.i];
+  $("obWord").textContent = it.fake || ((it.b.art ? it.b.art + " " : "") + it.b.w);
+  $("obProg").textContent = `${OB.i + 1} / ${OB.items.length}`;
+  $("obBar").style.width = (OB.i / OB.items.length * 100) + "%";
+}
+function obAnswer(yes){
+  OB.res.push({ ...OB.items[OB.i], yes }); OB.i++;
+  if (OB.i < OB.items.length) { obCard(); return; }
+  // Score: hits per band, corrected for guessing on the made-up words.
+  const fakes = OB.res.filter(r => r.fake), fa = fakes.filter(r => r.yes).length / (fakes.length || 1);
+  const sizes = [200, 400, Math.max(0, BANK.length - 600)];
+  let est = 0;
+  [0, 1, 2].forEach(band => {
+    const rs = OB.res.filter(r => r.b && r.band === band), hit = rs.filter(r => r.yes).length / (rs.length || 1);
+    const p = fa >= 1 ? 0 : Math.max(0, (hit - fa) / (1 - fa));
+    est += sizes[band] * p;
+  });
+  est = Math.round(est / 10) * 10;
+  const lvl = est < 120 ? "A1" : est < 400 ? "A1+" : "A2";
+  S.level = lvl; persist("level");
+  // Real words you said you know start as "recognised" on your list.
+  const known = OB.res.filter(r => r.b && r.yes).map(r => r.b.w);
+  if (fa <= 0.34 && known.length) { addWords(known); known.forEach(w => bump(w, "vo")); persist("stats"); }
+  S.placement = { est, level: lvl, ans: OB.ans, guess: fa, at: Date.now() }; persist("placement");
+  showObResult(est, lvl);
+}
+$("obYes").onclick = () => obAnswer(true);
+$("obNo").onclick = () => obAnswer(false);
+function showObResult(est, lvl){
+  $("ob1").hidden = true; $("ob2").hidden = true; $("ob3").hidden = false;
+  const label = { "A1": "Beginner (A1)", "A1+": "Beginner+ (A1+)", "A2": "Elementary (A2)" }[lvl];
+  const guessNote = S.placement && S.placement.guess > 0.34 ? `<p class="hint">You said you knew some of the made-up words, so Lena will start a little easier and find out as you talk.</p>` : "";
+  $("ob3").innerHTML = est
+    ? `<p class="label">Your starting point</p><div class="obres">≈ ${est}</div><p class="lead" style="margin-top:6px">German words you probably know. Lena will start at <b>${label}</b> and adjust as you talk.</p>${guessNote}`
+    : `<p class="label">Your starting point</p><div class="obres">Los geht's!</div><p class="lead" style="margin-top:6px">Starting from zero is perfect. In your first chats Lena will teach a few everyday words at a time, with English help, and you'll use each one straight away.</p>`;
+  $("ob3").innerHTML += `<div class="links"><button class="send" id="obChat">Start my first chat</button><button class="ghost" id="obHome">Go to home</button></div>`;
+  $("obChat").onclick = () => finishOnboarding(true);
+  $("obHome").onclick = () => finishOnboarding(false);
+}
+function startIntroChat(){
+  const beginner = !S.placement || S.placement.ans === "never" || (S.placement.est || 0) < 60;
+  const text = beginner
+    ? `FIRST MEETING WITH A COMPLETE BEGINNER: Greet them warmly. Teach 3–5 essential words one at a time inside the conversation (for example hallo, ich heiße…, danke, ja/nein, gut). For each one: say it, give the English in brackets, invite them to say it back, then ask a tiny question they can answer with it. Keep it light and encouraging.`
+    : `FIRST MEETING: Get to know the learner: their name, where they are from, what they do, and why they are learning German. Start very simply, with short English help in brackets. If they answer easily, make your German a little richer; if they struggle, simplify and teach one word at a time.`;
+  startChat({ title: "Erstes Treffen", mode: "intro", text });
+}
+$("redoOb").onclick = startOnboarding;
+
+/* ---------- Nachrichten: today's news in simple German ---------- */
+const xmlText = (el, tag) => { const n = el.getElementsByTagName(tag)[0]; return n ? n.textContent.trim() : ""; };
+async function fetchRss(url){
+  const r = await fetch(url); if (!r.ok) throw new Error("feed " + r.status);
+  const doc = new DOMParser().parseFromString(await r.text(), "text/xml");
+  return [...doc.getElementsByTagName("item")].map(it => ({
+    title: xmlText(it, "title"), text: xmlText(it, "description").replace(/<[^>]+>/g, "").slice(0, 400),
+    url: xmlText(it, "link"), date: xmlText(it, "pubDate") || xmlText(it, "dc:date")
+  }));
+}
+async function gatherNews(){
+  const world = [], india = [];
+  try {
+    const j = await (await fetch("https://www.tagesschau.de/api2u/news/?ressort=ausland")).json();
+    (j.news || []).filter(n => n.title && n.firstSentence).slice(0, 5).forEach(n => world.push({ title: n.title, text: n.firstSentence, url: n.shareURL || n.detailsweb || "", src: "tagesschau" }));
+  } catch {}
+  if (world.length < 3) { try { (await fetchRss("https://rss.dw.com/xml/rss-de-all")).slice(0, 5).forEach(n => world.push({ ...n, src: "DW" })); } catch {} }
+  const isIndia = x => /Indien|India|Indian|Modi|Delhi|Mumbai|Bengaluru|Bangalore|Kolkata|Chennai/i.test(x.title + " " + x.text);
+  try { (await fetchRss("https://rss.dw.com/xml/rss-de-all")).filter(isIndia).slice(0, 3).forEach(n => india.push({ ...n, src: "DW" })); } catch {}
+  try { (await fetchRss("https://rss.dw.com/rdf/rss-en-asia")).filter(isIndia).slice(0, 4).forEach(n => { if (india.length < 4 && !india.some(i => i.url === n.url)) india.push({ ...n, src: "DW (English)" }); }); } catch {}
+  return { world: world.slice(0, 4), india: india.slice(0, 3) };
+}
+let newsBusy = false;
+async function loadNews(force){
+  const key = "news:" + today() + ":" + S.level;
+  const cached = store.get(key, null);
+  $("newsDate").textContent = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+  if (cached && !force) { renderNews(cached); return; }
+  if (newsBusy) return;
+  if (!S.key) { $("newsBody").innerHTML = `<p class="lead">Lena needs your AI key to rewrite the news. Add it in Settings.</p>`; return; }
+  newsBusy = true; $("newsBody").innerHTML = `<p class="lead">Lena is reading today's news…</p>`;
+  try {
+    const src = await gatherNews();
+    const all = [...src.world.map(x => ({ ...x, region: "world" })), ...src.india.map(x => ({ ...x, region: "india" }))];
+    if (!all.length) throw new Error("No news could be loaded right now.");
+    const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary of the harder words in your German (dictionary form in "base").
+Reply ONLY with JSON: {"items":[{"id": number, "title_de": "...", "brief_de": "...", "en": "...", "glossary": [{"w": "word as written", "en": "meaning", "base": "dictionary form"}]}]}`;
+    const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }]));
+    const items = (data.items || []).map(it => { const o = all[+it.id]; return o ? { ...it, region: o.region, url: o.url, src: o.src } : null; }).filter(Boolean);
+    if (!items.length) throw new Error("Lena couldn't rewrite the news. Try Refresh.");
+    const res = { items, at: Date.now() }; store.set(key, res); renderNews(res);
+  } catch (e) { $("newsBody").innerHTML = `<p class="err">${esc(e.message || "Couldn't load the news. Try Refresh.")}</p>`; }
+  finally { newsBusy = false; }
+}
+function renderNews(res){
+  const sec = (region, label) => { const its = res.items.filter(i => i.region === region); if (!its.length) return "";
+    return `<div class="nsec">${label}</div>` + its.map((it, n) => `<article class="nitem ${region}" data-n="${res.items.indexOf(it)}">
+      <h3 class="de-text" lang="de">${glossHTML(it.title_de, it.glossary)}</h3>
+      <div class="nbody de-text" lang="de">${glossHTML(it.brief_de, it.glossary)}</div>
+      <div class="en-text" hidden>${esc(it.en || "")}</div>
+      <div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="slow">Slow</button><button class="chip" data-a="en">English</button></div>
+      <div class="nsrc">Source: ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.src)} ↗</a>` : esc(it.src)}</div></article>`).join(""); };
+  $("newsBody").innerHTML = sec("world", "Welt") + sec("india", "Indien") || `<p class="lead">No news today.</p>`;
+  window.__news = res;
+}
+$("newsBody").addEventListener("click", e => {
+  const a = e.target.dataset && e.target.dataset.a; if (!a) return;
+  const card = e.target.closest(".nitem"), it = window.__news && window.__news.items[+card.dataset.n]; if (!it) return;
+  if (a === "play") speak(it.title_de + ". " + it.brief_de);
+  if (a === "slow") speak(it.title_de + ". " + it.brief_de, Math.max(0.5, S.rate - 0.3));
+  if (a === "en") { const en = card.querySelector(".en-text"); en.hidden = !en.hidden; e.target.classList.toggle("on", !en.hidden); }
+});
+function openNews(){ stopAll(); show("news", "Nachrichten"); loadNews(false); }
+$("newsRefresh").onclick = () => loadNews(true);
+$("newsBtn").onclick = openNews;
+$("toNews").onclick = openNews;
+$("toAdv").onclick = () => { S.adv = true; persist("adv"); show("home"); };
+
+/* ---------- swipes: left → Advanced, right → News, up → a story ---------- */
+function onSwipe(el, handlers){
+  let x0 = 0, y0 = 0, t0 = 0, on = false;
+  el.addEventListener("touchstart", e => { if (e.touches.length !== 1) return; on = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); }, { passive: true });
+  el.addEventListener("touchend", e => {
+    if (!on) return; on = false;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Date.now() - t0 > 700) return;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > 1.6 * Math.abs(dy)) { (dx < 0 ? handlers.left : handlers.right)?.(); }
+    else if (dy < -70 && Math.abs(dy) > 1.6 * Math.abs(dx)) handlers.up?.();
+  }, { passive: true });
+}
+onSwipe($("simple"), {
+  left: () => { S.adv = true; persist("adv"); show("home"); },
+  right: openNews,
+  up: () => $("storyBtn").click()
+});
+onSwipe($("home"), { right: () => { S.adv = false; persist("adv"); show("home"); } });
+onSwipe($("news"), { left: () => show("home") });
+
 /* ---------- tap a word for its meaning ---------- */
 const norm = w => String(w).toLowerCase().replace(/[^\p{L}'’-]/gu, "");
 function glossHTML(text, gl){
@@ -1077,7 +1309,7 @@ document.addEventListener("click", async e => {
   if (!el) { hidePop(); return; }
   hidePop(); el.classList.add("sel");
   const word = el.textContent, key = norm(word);
-  if (el.closest(".t")) { const entry = entryFor(el.dataset.base) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
+  if (el.closest(".t, .nitem")) { const entry = entryFor(el.dataset.base) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
   let en = el.dataset.en || glossCache[key];
   if (en) { placePop(el, word, en); return; }
   placePop(el, word, "…");
