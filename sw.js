@@ -1,6 +1,6 @@
 // Keeps the app shell available so it opens fast; conversations still need internet.
-const CACHE = "lena-v2.1.0";
-const SHELL = ["./", "index.html", "vocab.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
+const CACHE = "lena-v2.2.0";
+const SHELL = ["./", "index.html", "vocab.js", "dict.js", "stories.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {

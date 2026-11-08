@@ -522,6 +522,8 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="vocab.js"></script>
+<script src="dict.js"></script>
+<script src="stories.js"></script>
 <script>
 (() => {
 // Everyone starts from a small core; the word list then grows from what each person actually says.
@@ -569,7 +571,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.1.0";
+const VERSION = "2.2.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -704,7 +706,21 @@ $("stories").innerHTML = STORIES.map((s,i) => `<button class="scene story" data-
 $("stories").onclick = e => { const b = e.target.closest(".story"); if (b) startStory(STORIES[+b.dataset.i]); };
 $("storyBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startStory(pickStory()); };
 function pickStory(){ const pool = STORIES.filter(x => !S.recentStories.includes(x.de)); const st = (pool.length ? pool : STORIES)[Math.floor(Math.random() * (pool.length || STORIES.length))]; S.recentStories = [st.de, ...S.recentStories].slice(0, 6); persist("recentStories"); return st; }
-function startStory(st){ startChat({ title: st.de, mode: "story", text: st.de }); }
+function storyText(title){ const s = (window.LENA_STORIES || {})[title]; return s ? (S.level === "A2" ? s.A2 : s.A1) : null; }
+function startStory(st){ const pre = !!storyText(st.de); startChat({ title: st.de, mode: "story", text: st.de, pre, part: 0 }); }
+// Story parts come from stories.js; Lena (the AI) only reacts to the learner's answers.
+function storyPart(i){
+  const parts = storyText(session.text) || [], end = (window.LENA_STORY_END || {})[S.level === "A2" ? "A2" : "A1"] || ["Ende!", "The end!"];
+  return i < parts.length ? parts[i] : end;
+}
+function tellStoryPart(prefix){
+  const parts = storyText(session.text) || [];
+  const p = storyPart(session.part);
+  const d = { reply_de: (prefix ? prefix.de + " " : "") + p[0], reply_en: (prefix ? prefix.en + " " : "") + p[1], glossary: prefix ? prefix.glossary || [] : [], new_words: prefix ? prefix.new_words || [] : [] };
+  if (session.part >= parts.length) session.done = true;
+  session.part++;
+  return d;
+}
 $("talkBtn").onclick = openTalk;
 $("topicBtn").onclick = () => { const t = $("topicInput").value.trim(); if (!t) { $("topicInput").focus(); return; } $("topicInput").value = ""; startChat({ title: "Einfach reden", mode: "free", text: t }); };
 $("topicInput").onkeydown = e => { if (e.key === "Enter") $("topicBtn").click(); };
@@ -860,28 +876,12 @@ const LEVEL_TEXT = {
   "A1+": "CEFR A1+: 2 short sentences, present tense, may add one simple connector (und, aber, oder).",
   "A2": "CEFR A2: 2–3 everyday sentences; present and simple past (Perfekt) are fine."
 };
-function systemPrompt(){
-  const ctx = session.mode === "free"
-    ? `FREE CHAT. Start by bringing up this topic naturally: ${session.text}. Let the chat drift wherever the learner takes it, like two friends talking. If it stalls, move to a new everyday topic.`
-    : session.mode === "story"
-    ? `STORY TIME: Tell the German folk tale "${session.text}" in your own very simple words, in small parts of 2–3 short sentences. Begin with one line about where the story comes from. After each part, stop and ask the learner one easy question (about the story, or what they think happens next). When they answer, react briefly to what they said, then continue. Finish in about 6–8 parts, then chat with the learner about the story.`
-    : session.mode === "intro" ? session.text
-    : `ROLE-PLAY: ${session.text}`;
-  return `You are Lena, a warm, curious German friend helping an adult learner from India build speaking fluency through natural conversation. They may be a complete beginner or may already know some German from elsewhere; adapt to what they can actually say. This is not a structured course: the learner picks up words by using them.
-
-${ctx}
-
-LEVEL: ${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}${beginnerSupport()}
-
-WORDS THE LEARNER KNOWS: ${allWords().join(", ")}
-
-WORTH REVIEWING (useful words the learner knows but hasn't used lately): ${focusWords().join(", ")}
-GOOD NEXT NEW WORDS (very common words the learner hasn't learned yet): ${nextNewWords().map(b => (b.art ? b.art + " " : "") + b.w + " = " + b.en).join("; ")}
-- Use at most ONE word from these lists per reply, and only if it fits what you are already talking about. Never change the subject or bend a sentence just to fit a word in. The conversation must stay natural.
-- When you bring in a new word, prefer one from GOOD NEXT NEW WORDS and make its meaning clear from context.
+// Lena's instructions. The fixed rules come first and never change, then the details of this chat, which are frozen
+// for blocks of turns. Identical openings let Google reuse ("cache") them, which makes each call cheaper.
+const RULES = `You are Lena, a warm, curious German friend helping an adult learner from India build speaking fluency through natural conversation. They may be a complete beginner or may already know some German from elsewhere; adapt to what they can actually say. This is not a structured course: the learner picks up words by using them.
 
 HOW TO REPLY
-- Natural, friendly spoken German. Build mainly from the known words; if the list is short, keep sentences very simple and bring in useful everyday words gradually.
+- Natural, friendly spoken German. Build mainly from the words the learner knows (listed under THIS CHAT); if that list is short, keep sentences very simple and bring in useful everyday words gradually.
 - Introduce at most 2 new words per reply and list them in new_words (nouns with der/die/das).
 - Usually end with one easy question so the learner has something to answer.
 - Share a little about yourself too, so it feels like a real conversation, not an interview.
@@ -893,12 +893,13 @@ HOW TO REPLY
 - SPOKEN MESSAGES: if the learner's latest message is audio, write exactly what they said in learner_heard, word for word, every word in the language it was spoken in (keep English words in English; never translate, fix or tidy it). Then correct that transcript like a typed message. If you can't make it out, set learner_heard to "" and kindly ask them to say it again.
 - English help goes only in square brackets right after the German word it explains, e.g. Machst [machen = to do] du Sport? Only for words the learner probably doesn't know yet. Plain text only: no asterisks or other formatting.
 - The learner speaks through speech-to-text: ignore capitalisation and punctuation, and never correct those.
+- From the word lists under THIS CHAT, use at most ONE word per reply, and only if it fits what you are already talking about. Never change the subject or bend a sentence just to fit a word in. When you bring in a new word, prefer one from GOOD NEXT NEW WORDS and make its meaning clear from context.
 
 CHECK THE LEARNER'S LATEST MESSAGE
 - Real error (wrong word, grammar, word order, article, verb ending) → correction = {"corrected": fixed sentence, "note": very short English explanation}.
 - Fine → correction = null. Be encouraging, never lecture.
 
-GLOSSARY: for EVERY word in reply_de, give its English meaning as used in this sentence (so the learner can tap any word), and its dictionary form.
+GLOSSARY: the app has its own dictionary for everyday words. List ONLY words in reply_de that are unusual, idiomatic, or used in an unusual sense here (at most 4), with their meaning as used and dictionary form. Usually leave it empty.
 
 WORD TRACKING (use the exact spelling from the WORDS THE LEARNER KNOWS list; match inflected forms to their list entry, e.g. "trinke" -> "trinken"):
 - learner_used: every listed word the learner used in their latest message, with ok=false if they used that word wrongly (wrong form, ending, article or meaning).
@@ -906,7 +907,36 @@ WORD TRACKING (use the exact spelling from the WORDS THE LEARNER KNOWS list; mat
 - learner_new: German words NOT in the list that the learner used correctly in their latest message (dictionary form, max 5, no names of people or places), with their English meaning.
 
 Reply with ONLY JSON, no markdown:
-{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning", "base": "dictionary form"}], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"], "learner_new": [{"w": "dictionary form", "en": "meaning"}], "english_words": [], "learned_words": [], "learner_heard": ""}`;
+{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"], "learner_new": [{"w": "dictionary form", "en": "meaning"}], "english_words": [], "learned_words": [], "learner_heard": ""}`;
+// The word lists are refreshed every 8 of the learner's messages (and when the level changes), not on every turn.
+function chatSnapshot(){
+  const mine = turns.filter(t => t.role === "user").length;
+  const sn = session.snap;
+  if (!sn || mine - sn.at >= 8 || sn.level !== S.level) session.snap = { at: mine, level: S.level, words: allWords().join(", "), focus: focusWords().join(", "),
+    next: nextNewWords().map(b => (b.art ? b.art + " " : "") + b.w + " = " + b.en).join("; "), beginner: beginnerSupport() };
+  return session.snap;
+}
+function systemPrompt(){
+  const sn = chatSnapshot();
+  const ctx = session.mode === "free"
+    ? `FREE CHAT. Start by bringing up this topic naturally: ${session.text}. Let the chat drift wherever the learner takes it, like two friends talking. If it stalls, move to a new everyday topic.`
+    : session.mode === "story" && session.pre && !session.done
+    ? `STORY TIME: you are telling the folk tale "${session.text}". The app shows the story text in parts; your last message ended with a question about the story. React warmly to the learner's answer in 1–2 short German sentences (gently help if they misunderstood), but do NOT continue the story and do NOT ask a new question — the app adds the next part right after your reaction. Correct their German as usual.`
+    : session.mode === "story"
+    ? (session.pre ? `STORY TIME is over: you just told the folk tale "${session.text}". Chat with the learner about the story (what they liked, similar stories from India), simply and naturally.` : `STORY TIME: Tell the German folk tale "${session.text}" in your own very simple words, in small parts of 2–3 short sentences. Begin with one line about where the story comes from. After each part, stop and ask the learner one easy question (about the story, or what they think happens next). When they answer, react briefly to what they said, then continue. Finish in about 6–8 parts, then chat with the learner about the story.`)
+    : session.mode === "intro" ? session.text
+    : `ROLE-PLAY: ${session.text}`;
+  return `${RULES}
+
+THIS CHAT
+${ctx}
+
+LEVEL: ${LEVEL_TEXT[sn.level] || LEVEL_TEXT.A1}${sn.beginner}
+
+WORDS THE LEARNER KNOWS: ${sn.words}
+
+WORTH REVIEWING (useful words the learner knows but hasn't used lately): ${sn.focus}
+GOOD NEXT NEW WORDS (very common words the learner hasn't learned yet): ${sn.next}`;
 }
 function parseJSON(text){
   if (!text) throw new Error("Empty answer");
@@ -1004,7 +1034,8 @@ function history(extra){
     ? "(Start the role-play now, in your role, with one short line and an easy question. correction must be null.)"
     : "(Start the conversation now with a short, friendly opening and an easy question. correction must be null.)";
   const msgs = [{ role: "user", content: open }];
-  turns.slice(-30).forEach(t => msgs.push(t));
+  const start = turns.length > 36 ? Math.floor((turns.length - 24) / 12) * 12 : 0;
+  turns.slice(start).forEach(t => msgs.push(t));
   if (msgs.length > 1 && msgs[1].role === "user") msgs.splice(1, 0, { role: "assistant", content: "Hallo!" });
   if (extra) msgs.push({ role: "user", content: extra });
   return msgs;
@@ -1070,6 +1101,7 @@ async function ask(userEl, userText, media){
     (d.new_words || []).forEach(w => w && w.de && newWords.push({ de: String(w.de), en: String(w.en || "") }));
     trackUsage(userEl ? d.learner_used : null, d.lena_used);
     if (userEl) learnFromLearner(d.learner_new);
+    if (userEl && session.mode === "story" && session.pre && !session.done) { const next = tellStoryPart({ de: d.reply_de, en: d.reply_en || "", glossary: d.glossary, new_words: d.new_words }); d.reply_de = next.reply_de; d.reply_en = next.reply_en; }
     turns.push({ role: "assistant", content: d.reply_de });
     if (userEl) chatLog.push({ u: userText, c: d.correction || null, en: Array.isArray(d.english_words) ? d.english_words : [] });
     chatLog.push({ t: { reply_de: d.reply_de, reply_en: d.reply_en || "", glossary: Array.isArray(d.glossary) ? d.glossary : [], new_words: Array.isArray(d.new_words) ? d.new_words : [] } });
@@ -1138,6 +1170,7 @@ function startChat(s){
   $("handsBtn").classList.toggle("on", S.autoListen);
   show("chat", S.adv ? s.title : "Lena");
   if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
+  if (s.mode === "story" && s.pre) { const d = tellStoryPart(null); turns.push({ role: "assistant", content: d.reply_de }); chatLog.push({ t: d }); saveChat(); tutorBubble(d); return; }
   ask(null, null);
 }
 function send(){
@@ -1160,7 +1193,7 @@ $("hintBtn").onclick = async () => {
   busy = true;
   const box = document.createElement("div"); box.className = "hintbox"; box.innerHTML = `<span class="typing">Finding an easy answer…</span>`; msgs.appendChild(box); scrollDown();
   try {
-    const h = parseJSON(await callLLM(systemPrompt(), history('(The learner tapped "Help me answer". Do NOT continue the conversation. Suggest one short, easy reply the learner could say next, using known words. Reply ONLY with JSON: {"de": "...", "en": "...", "glossary": [{"w": "each word of de", "en": "meaning"}]})')));
+    const h = parseJSON(await callLLM(systemPrompt(), history('(The learner tapped "Help me answer". Do NOT continue the conversation. Suggest one short, easy reply the learner could say next, using known words. Reply ONLY with JSON: {"de": "...", "en": "...", "glossary": [{"w": "only unusual words in de", "en": "meaning"}]})')));
     box.innerHTML = `<div class="label" style="margin-bottom:4px">You could say</div><div class="de-text" lang="de">${glossHTML(h.de, h.glossary)}</div><div class="en-text">${esc(h.en)}</div><div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="use">Use this</button></div>`;
     box.querySelector(".tools").onclick = e => { const a = e.target.dataset.a; if (a === "play") speak(h.de, Math.max(0.5, S.rate - 0.2)); if (a === "use") { $("input").value = h.de; grow(); } };
   } catch (e) { box.innerHTML = `<span class="err">${esc(e.message)}</span>`; }
@@ -1526,6 +1559,13 @@ async function loadNews(force){
   try { Object.keys(localStorage).filter(k => k.startsWith("lena:news:") && !k.startsWith("lena:news:" + today())).forEach(k => localStorage.removeItem(k)); } catch {}
   if (cached && !force) { renderNews(cached); return; }
   if (newsBusy) return;
+  // One rewrite per day and level for everyone: the first person to open the news saves it to the shared account store.
+  const sharedRef = fbDb && me ? fbDb.collection("news").doc(today() + "_" + S.level.replace("+", "p")) : null;
+  if (sharedRef && !force) {
+    newsBusy = true; $("newsBody").innerHTML = `<p class="nstatus">Fetching today's news…</p>`;
+    try { const snap = await sharedRef.get(); const d = snap.exists ? snap.data() : null; if (d && Array.isArray(d.items) && d.items.length) { const res = { items: d.items, at: d.at || Date.now() }; store.set(key, res); renderNews(res); newsBusy = false; return; } } catch {}
+    newsBusy = false;
+  }
   if (!S.key) { $("newsBody").innerHTML = `<p class="lead">Lena needs your AI key to rewrite the news. Add it in Settings.</p>`; return; }
   newsBusy = true; $("newsBody").innerHTML = `<p class="nstatus">Fetching today's headlines…</p>`;
   let all = [];
@@ -1534,12 +1574,13 @@ async function loadNews(force){
     all = [...src.world.map(x => ({ ...x, region: "world" })), ...src.india.map(x => ({ ...x, region: "india" }))];
     if (!all.length) throw new Error("Couldn't reach the news sources (tagesschau, DW). Check your internet and tap Refresh.");
     renderRaw(all, "Lena is rewriting these in simple German…");
-    const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary with EVERY word of your German headline and brief (meaning as used, dictionary form in "base"), so the learner can tap any word.
+    const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary of only the unusual words, names and special terms in your German (at most 6 per item; meaning as used, dictionary form in "base") — the app has its own dictionary for everyday words.
 Reply ONLY with JSON: {"items":[{"id": number, "title_de": "...", "brief_de": "...", "en": "...", "glossary": [{"w": "word as written", "en": "meaning", "base": "dictionary form"}]}]}`;
     const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }], null, 8000));
     const items = (Array.isArray(data) ? data : (data.items || [])).map(it => { const o = all[+it.id]; return o ? { ...it, region: o.region, url: o.url, src: o.src } : null; }).filter(Boolean);
     if (!items.length) throw new Error("Lena's answer came back empty.");
     const res = { items, at: Date.now() }; store.set(key, res); renderNews(res);
+    if (sharedRef) sharedRef.set(JSON.parse(JSON.stringify({ items, at: res.at, by: me.uid }))).catch(() => {});
   } catch (e) {
     const msg = e && e.message ? e.message : "Something went wrong.";
     if (all.length) renderRaw(all, `Showing the original headlines. Lena couldn't simplify them just now (${msg}). Tap Refresh to try again.`);
@@ -1616,10 +1657,40 @@ function glossHTML(text, gl){
   // English help in [brackets] is shown quietly and isn't tappable; every German word is.
   return String(text ?? "").split(/(\[[^\]]*\])/).map((chunk, j) => j % 2 ? `<span class="hint-en">${esc(chunk)}</span>` :
     chunk.split(/(\p{L}[\p{L}'’-]*)/u).map((part, i) => { if (!(i % 2)) return esc(part); const g = map[norm(part)] || {};
-      return `<span class="wd" data-en="${esc(g.en || localMeaning(part))}" data-base="${esc(g.base || part)}">${esc(part)}</span>`; }).join("")).join("");
+      return `<span class="wd" data-en="${esc(g.en || localMeaning(part))}" data-base="${esc(g.base || localBase(part) || part)}">${esc(part)}</span>`; }).join("")).join("");
 }
-// Meanings we already have on the phone (word bank, your list), so most taps need no AI call.
-function localMeaning(w){ const e = entryFor(w); if (e && enOf(e)) return enOf(e); const b = bankOf(w); return b ? b.en : ""; }
+// Meanings we already have on the phone (your list, Lena's word bank, the offline dictionary), so most taps need no AI call.
+const DICT = new Map(), IRREG = new Map();
+String(window.LENA_DICT || "").split("\n").forEach(l => {
+  if (l[0] === "~") { const [f, lem] = l.slice(1).split(">"); if (f && lem) IRREG.set(f, lem); return; }
+  const [w, en, g] = l.split("|"); if (!w || !en) return; const k = w.toLowerCase();
+  if (!DICT.has(k)) DICT.set(k, []); DICT.get(k).push({ w, en, art: ART[g] || "" });
+});
+function lemmaCandidates(w){
+  const c = [w]; const add = x => { if (x && x.length > 1 && !c.includes(x)) c.push(x); };
+  add(w + "en"); add(w + "n");
+  const um = x => x.replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u");
+  for (const suf of ["test", "tet", "ten", "te", "sten", "ster", "stes", "stem", "ste", "eren", "erer", "eres", "erem", "ere", "est", "en", "em", "er", "es", "et", "st", "e", "n", "s", "t"])
+    if (w.endsWith(suf) && w.length - suf.length >= 2) { const s = w.slice(0, -suf.length); add(s); add(s + "en"); add(s + "n"); add(s + "e"); add(um(s)); add(um(s) + "en"); }
+  if (/^ge.+(t|en)$/.test(w)) { const s = w.replace(/^ge/, "").replace(/(et|t|en)$/, ""); add(s + "en"); add(s + "n"); }
+  const m = w.match(/^(ab|an|auf|aus|bei|ein|mit|nach|vor|weg|zu|zurück|los|fest|her|hin)ge(.+)(t|en)$/);
+  if (m) { add(m[1] + m[2].replace(/e$/, "") + "en"); add(m[1] + m[2] + "en"); }
+  return c;
+}
+// Look a word up offline: { base, en } or null. Prefers a noun when the word is capitalised mid-sentence.
+function lookupWord(word){
+  const raw = String(word || "").trim(); if (!raw) return null; const lw = raw.toLowerCase();
+  const fromDict = (k, cap) => { const es = DICT.get(k); if (!es) return null; const e = es.find(x => (x.w[0] === x.w[0].toUpperCase()) === cap) || es[0]; return { base: (e.art ? e.art + " " : "") + e.w, en: e.en }; };
+  const known = k => { const e = entryFor(k); if (e && enOf(e)) return { base: withArt(e), en: enOf(e) }; const b = bankOf(k); return b ? { base: (b.art ? b.art + " " : "") + b.w, en: b.en } : null; };
+  const cap = raw[0] !== raw[0].toLowerCase();
+  const direct = known(raw) || known(lw) || fromDict(lw, cap);
+  if (direct) return direct;
+  if (IRREG.has(lw)) { const l = IRREG.get(lw); return known(l) || fromDict(l.toLowerCase(), l[0] !== l[0].toLowerCase()); }
+  for (const c of lemmaCandidates(lw).slice(1)) { const hit = known(c) || fromDict(c, false) || fromDict(c, true); if (hit) return hit; }
+  return null;
+}
+function localMeaning(w){ const r = lookupWord(w); return r ? r.en : ""; }
+function localBase(w){ const r = lookupWord(w); return r ? r.base : ""; }
 const glossCache = {};
 function hidePop(){ $("pop").hidden = true; document.querySelectorAll(".wd.sel").forEach(w => w.classList.remove("sel")); }
 function placePop(el, word, en){
@@ -1637,7 +1708,8 @@ document.addEventListener("click", async e => {
   if (!recording && !listening) { wordTapAt = Date.now(); speak(word, Math.max(0.6, S.rate - 0.15)); }
   if (el.closest(".t, .nitem")) { const entry = entryFor(String(el.dataset.base || "").replace(/^(der|die|das) /i, "")) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
   let en = el.dataset.en || glossCache[key];
-  if (en) { placePop(el, word, en); return; }
+  const base = String(el.dataset.base || ""), label = base && base.replace(/^(der|die|das) /i, "").toLowerCase() !== key ? `${word} · ${base}` : base && /^(der|die|das) /i.test(base) ? base : word;
+  if (en) { placePop(el, label, en); return; }
   placePop(el, word, "…");
   try {
     const sentence = el.closest(".de-text")?.textContent || word;
