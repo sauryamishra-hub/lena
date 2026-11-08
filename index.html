@@ -205,6 +205,8 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .vrow input{flex:1;min-width:0}
 .vlist div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .vlist div:first-child{border-top:0}
+.storylink{display:flex;align-items:center;gap:8px;background:transparent;border:0;border-bottom:2px solid var(--gold);padding:6px 2px;font-weight:700;color:var(--ink);font-size:16px}
+.scene.story{border-top:4px solid var(--gold)}
 </style>
 </head>
 <body>
@@ -235,6 +237,7 @@ p.lead{color:var(--muted);margin:0 0 16px}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
     </button>
     <p class="sub-en">Tap and just start talking.</p>
+    <button class="storylink" id="storyBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg>Or let Lena tell you a story</button>
     <button class="ghost setup" id="setupBtn" hidden>Set up Lena's key first</button>
   </main>
 
@@ -253,6 +256,8 @@ p.lead{color:var(--muted);margin:0 0 16px}
     </div>
     <div class="heat" id="heatBar"></div>
     <div class="legend" id="heatLegend"></div>
+    <p class="label">Geschichten · Lena tells a folk tale</p>
+    <div class="grid" id="stories" style="margin-bottom:22px"></div>
     <p class="label">Practise a situation</p>
     <div class="grid" id="scenes"></div>
     <div class="links"><button class="ghost" id="wordsBtn">My words &amp; mistakes</button></div>
@@ -354,6 +359,7 @@ p.lead{color:var(--muted);margin:0 0 16px}
       <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
     </div>
     <label class="toggle"><input type="checkbox" id="autoSpeak"> Read Lena's replies aloud</label>
+    <label class="toggle"><input type="checkbox" id="autoListen"> Turn the mic on by itself when Lena finishes speaking</label>
     <label class="toggle"><input type="checkbox" id="autoSend"> Send automatically when I stop speaking</label>
     <div class="links"><button class="ghost" id="voiceTest">Test voice</button></div>
     <div id="inviteBox" hidden style="margin-top:32px">
@@ -368,11 +374,31 @@ p.lead{color:var(--muted);margin:0 0 16px}
 
 <script>
 (() => {
-const BASE_WORDS = ["Tee","Café","bitte","oder","hallo","Zucker","Milch","mit","danke","Wasser","Kekse","und","tschüss","ich bin","ich komme aus","Tokio","Paris","Toronto","London","Berlin","und du","freut mich","mein","dein","Mama","Papa","Schwester","Bruder","Tochter","das ist","ist","lustig","nett","gut","schön","guck mal","hungrig","durstig","satt","müde","billig","lecker","das Restaurant","die","das","Wurst","Pizza","Fleisch","Salat","Käse","Schnitzel","Brot","Kaffee","Cola","trinken","alt","groß","klein","Stadt","Hotel","wo ist","hier","Park","Bahnhof","links","rechts","da drüben","Bäckerei","U-Bahn","Bibliothek","Toilette","Zoo","Taxi","Imbiss","geöffnet","Mann","Frau","Lehrer","Lehrerin","Bäcker","Bäckerin","Verkäufer","Verkäuferin","Musiker","ich","du","sie","ihr","wir","sind","bist","ja","nein","dir","mir","sportlich","schwimmen","joggen","wandern","spielen","Fußball","Tennis","Sport","Yoga","Musik","Party","cool","oft","nie","sehr","laut","draußen","brauchen","gehen","nach Hause","Handy","Entschuldigung","wirklich"];
+// Everyone starts from a small core; the word list then grows from what each person actually says.
+const BASE_WORDS = ["hallo","tschüss","danke","bitte","ja","nein","ich","du","wir","ist","bin","bist","und","oder","gut","sehr","nicht","was","wo","wie","heute","Wasser","Kaffee","Tee","essen","trinken","gehen","haben","Name","Entschuldigung"];
+// Words Saurya already knew from Duolingo, added to his account once.
+const SAURYA_WORDS = ["Tee","Café","bitte","oder","hallo","Zucker","Milch","mit","danke","Wasser","Kekse","und","tschüss","ich bin","ich komme aus","Tokio","Paris","Toronto","London","Berlin","und du","freut mich","mein","dein","Mama","Papa","Schwester","Bruder","Tochter","das ist","ist","lustig","nett","gut","schön","guck mal","hungrig","durstig","satt","müde","billig","lecker","das Restaurant","die","das","Wurst","Pizza","Fleisch","Salat","Käse","Schnitzel","Brot","Kaffee","Cola","trinken","alt","groß","klein","Stadt","Hotel","wo ist","hier","Park","Bahnhof","links","rechts","da drüben","Bäckerei","U-Bahn","Bibliothek","Toilette","Zoo","Taxi","Imbiss","geöffnet","Mann","Frau","Lehrer","Lehrerin","Bäcker","Bäckerin","Verkäufer","Verkäuferin","Musiker","ich","du","sie","ihr","wir","sind","bist","ja","nein","dir","mir","sportlich","schwimmen","joggen","wandern","spielen","Fußball","Tennis","Sport","Yoga","Musik","Party","cool","oft","nie","sehr","laut","draußen","brauchen","gehen","nach Hause","Handy","Entschuldigung","wirklich"];
 
-const EN = {"Tee":"tea","Café":"café","bitte":"please","oder":"or","hallo":"hello","Zucker":"sugar","Milch":"milk","mit":"with","danke":"thank you","Wasser":"water","Kekse":"biscuits","und":"and","tschüss":"bye","ich bin":"I am","ich komme aus":"I come from","Tokio":"Tokyo","und du":"and you?","freut mich":"nice to meet you","mein":"my","dein":"your","Mama":"mum","Papa":"dad","Schwester":"sister","Bruder":"brother","Tochter":"daughter","das ist":"this is","ist":"is","lustig":"funny","nett":"nice","gut":"good","schön":"beautiful","guck mal":"look!","hungrig":"hungry","durstig":"thirsty","satt":"full (not hungry)","müde":"tired","billig":"cheap","lecker":"tasty","das Restaurant":"the restaurant","die":"the (feminine)","das":"the (neuter)","Wurst":"sausage","Fleisch":"meat","Salat":"salad","Käse":"cheese","Brot":"bread","Kaffee":"coffee","trinken":"to drink","alt":"old","groß":"big","klein":"small","Stadt":"city","wo ist":"where is","hier":"here","Bahnhof":"train station","links":"left","rechts":"right","da drüben":"over there","Bäckerei":"bakery","U-Bahn":"underground train","Bibliothek":"library","Toilette":"toilet","Imbiss":"snack bar","geöffnet":"open","Mann":"man","Frau":"woman","Lehrer":"teacher (male)","Lehrerin":"teacher (female)","Bäcker":"baker (male)","Bäckerin":"baker (female)","Verkäufer":"salesman","Verkäuferin":"saleswoman","Musiker":"musician","ich":"I","du":"you (one friend)","sie":"she","ihr":"you (several friends)","wir":"we","sind":"are (we / they)","bist":"are (you)","ja":"yes","nein":"no","dir":"to you","mir":"to me","sportlich":"sporty","schwimmen":"to swim","joggen":"to jog","wandern":"to hike","spielen":"to play","Fußball":"football","Sport":"sport","Musik":"music","oft":"often","nie":"never","sehr":"very","laut":"loud","draußen":"outside","brauchen":"to need","gehen":"to go","nach Hause":"(going) home","Handy":"mobile phone","Entschuldigung":"excuse me","wirklich":"really"};
+const EN = {"Tee":"tea","Café":"café","bitte":"please","oder":"or","hallo":"hello","Zucker":"sugar","Milch":"milk","mit":"with","danke":"thank you","Wasser":"water","Kekse":"biscuits","und":"and","tschüss":"bye","ich bin":"I am","ich komme aus":"I come from","Tokio":"Tokyo","und du":"and you?","freut mich":"nice to meet you","mein":"my","dein":"your","Mama":"mum","Papa":"dad","Schwester":"sister","Bruder":"brother","Tochter":"daughter","das ist":"this is","ist":"is","lustig":"funny","nett":"nice","gut":"good","schön":"beautiful","guck mal":"look!","hungrig":"hungry","durstig":"thirsty","satt":"full (not hungry)","müde":"tired","billig":"cheap","lecker":"tasty","das Restaurant":"the restaurant","die":"the (feminine)","das":"the (neuter)","Wurst":"sausage","Fleisch":"meat","Salat":"salad","Käse":"cheese","Brot":"bread","Kaffee":"coffee","trinken":"to drink","alt":"old","groß":"big","klein":"small","Stadt":"city","wo ist":"where is","hier":"here","Bahnhof":"train station","links":"left","rechts":"right","da drüben":"over there","Bäckerei":"bakery","U-Bahn":"underground train","Bibliothek":"library","Toilette":"toilet","Imbiss":"snack bar","geöffnet":"open","Mann":"man","Frau":"woman","Lehrer":"teacher (male)","Lehrerin":"teacher (female)","Bäcker":"baker (male)","Bäckerin":"baker (female)","Verkäufer":"salesman","Verkäuferin":"saleswoman","Musiker":"musician","ich":"I","du":"you (one friend)","sie":"she","ihr":"you (several friends)","wir":"we","sind":"are (we / they)","bist":"are (you)","ja":"yes","nein":"no","dir":"to you","mir":"to me","sportlich":"sporty","schwimmen":"to swim","joggen":"to jog","wandern":"to hike","spielen":"to play","Fußball":"football","Sport":"sport","Musik":"music","oft":"often","nie":"never","sehr":"very","laut":"loud","draußen":"outside","brauchen":"to need","gehen":"to go","nach Hause":"(going) home","Handy":"mobile phone","Entschuldigung":"excuse me","wirklich":"really","bin":"am","nicht":"not","was":"what","wo":"where","wie":"how","heute":"today","essen":"to eat","haben":"to have","Name":"name"};
 
 const TOPICS = ["what you drank this morning (tea or coffee)","the weather today","your family","your weekend","food you like","sports you play or watch","music","your city","a café you like","travel and cities you know (Paris, London, Tokio, Berlin)","being tired, hungry or thirsty","your phone","going for a walk or hike","a restaurant visit","your work day","friends","a party","the park and the zoo","going home by taxi or U-Bahn","bread and the bakery","cricket and football","festivals like Diwali","your favourite place","yoga and staying fit","something funny that happened","what is open or closed today","a teacher you remember","the library and books","cheap vs. expensive things","noise in the city"];
+
+const STORIES = [
+  {de:"Die Bremer Stadtmusikanten", en:"The Town Musicians of Bremen"},
+  {de:"Der Rattenfänger von Hameln", en:"The Pied Piper of Hamelin"},
+  {de:"Die Loreley", en:"The Lorelei of the Rhine"},
+  {de:"Rübezahl", en:"Rübezahl, the mountain spirit"},
+  {de:"Die Heinzelmännchen von Köln", en:"The little helpers of Cologne"},
+  {de:"Frau Holle", en:"Mother Holle"},
+  {de:"Rotkäppchen", en:"Little Red Riding Hood"},
+  {de:"Hänsel und Gretel", en:"Hansel and Gretel"},
+  {de:"Rumpelstilzchen", en:"Rumpelstiltskin"},
+  {de:"Der Froschkönig", en:"The Frog Prince"},
+  {de:"Till Eulenspiegel", en:"Till Eulenspiegel, the trickster"},
+  {de:"Barbarossa im Kyffhäuser", en:"The emperor asleep in the mountain"},
+  {de:"Siegfried und der Drache", en:"Siegfried and the dragon"},
+  {de:"Die Schildbürger", en:"The foolish townsfolk of Schilda"}
+];
 
 const SCENES = [
   {de:"Im Café", en:"At the café", brief:"You are a waiter in a Berlin café taking the learner's order."},
@@ -383,7 +409,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -408,11 +434,11 @@ const store = {
 const S = {
   provider: store.get("provider","gemini"), key: store.get("key",""), level: store.get("level","A1"),
   voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
-  hands: store.get("hands",false), model: store.get("model",""), adv: store.get("adv",false),
+  autoListen: store.get("autoListen",false), seeded: store.get("seeded",false), recentStories: store.get("recentStories",[]), model: store.get("model",""), adv: store.get("adv",false),
   added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[]),
   stats: store.get("stats",{}), en: store.get("en",{})
 };
-const SYNCED = ["added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
+const SYNCED = ["autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
 let userRef = null, syncTimer = null;
 const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
 function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
@@ -449,6 +475,11 @@ function renderHome(){
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
 $("scenes").onclick = e => { const b = e.target.closest(".scene"); if (b) { const s = SCENES[+b.dataset.i]; startChat({ title: s.de, mode: "scene", text: s.brief }); } };
+$("stories").innerHTML = STORIES.map((s,i) => `<button class="scene story" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
+$("stories").onclick = e => { const b = e.target.closest(".story"); if (b) startStory(STORIES[+b.dataset.i]); };
+$("storyBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startStory(pickStory()); };
+function pickStory(){ const pool = STORIES.filter(x => !S.recentStories.includes(x.de)); const st = (pool.length ? pool : STORIES)[Math.floor(Math.random() * (pool.length || STORIES.length))]; S.recentStories = [st.de, ...S.recentStories].slice(0, 6); persist("recentStories"); return st; }
+function startStory(st){ startChat({ title: st.de, mode: "story", text: st.de }); }
 $("talkBtn").onclick = () => startChat({ title: "Einfach reden", mode: "free", text: pickTopic() });
 $("topicBtn").onclick = () => { const t = $("topicInput").value.trim(); if (!t) { $("topicInput").focus(); return; } $("topicInput").value = ""; startChat({ title: "Einfach reden", mode: "free", text: t }); };
 $("topicInput").onkeydown = e => { if (e.key === "Enter") $("topicBtn").click(); };
@@ -487,11 +518,11 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, listening = false, heard = "";
 function setStatus(t){ $("status").textContent = t || ""; $("phase").querySelector("small").textContent = t || ""; }
 let phase = "idle", loop = false;
-const PHASES = { listening: "Ich höre zu…", thinking: "Lena denkt nach…", speaking: "Lena spricht…", paused: "Tap the button to talk", idle: "" };
+const PHASES = { listening: "Ich höre zu…", thinking: "Lena denkt nach…", speaking: "Lena spricht…", paused: "Your turn", idle: "" };
 function setPhase(p, note){
   phase = p; const o = $("orbBtn"); o.className = "orb" + (p === "listening" || p === "thinking" || p === "speaking" ? " " + p : "");
   $("phase").firstChild.textContent = PHASES[p] || "";
-  $("phase").querySelector("small").textContent = note || (p === "listening" ? "Speak German now. Tap to send." : p === "speaking" ? "Tap to interrupt and answer." : "");
+  $("phase").querySelector("small").textContent = note || (p === "listening" ? "Speak German now. Tap to send." : p === "speaking" ? "Tap to interrupt and answer." : p === "paused" ? "Take your time. Tap the button when you're ready to answer." : "");
 }
 $("orbBtn").onclick = () => {
   unlockAudio();
@@ -516,14 +547,14 @@ function startListening(){
   rec.onend = () => {
     listening = false; $("micBtn").classList.remove("live");
     if (status_isListening()) setStatus("");
-    if (heard.trim() && (S.autoSend || S.hands || loop)) send();
+    if (heard.trim() && (S.autoSend || S.autoListen || loop)) send();
     else if (phase === "listening") setPhase("paused", $("status").textContent);
   };
   try { rec.start(); listening = true; $("micBtn").classList.add("live"); setPhase("listening"); if (S.adv) setStatus("Listening… sprich jetzt"); } catch { setPhase("paused", "Couldn't start the mic. Tap again."); }
 }
 function status_isListening(){ return $("status").textContent.startsWith("Listening"); }
 $("micBtn").onclick = () => { if (listening) { try { rec.stop(); } catch {} } else startListening(); };
-$("handsBtn").onclick = () => { S.hands = !S.hands; persist("hands"); $("handsBtn").classList.toggle("on", S.hands); if (S.hands && !listening && !busy) startListening(); };
+$("handsBtn").onclick = () => { S.autoListen = !S.autoListen; persist("autoListen"); $("handsBtn").classList.toggle("on", S.autoListen); if (S.autoListen && !listening && !busy) startListening(); };
 
 /* ---------- the tutor brain ---------- */
 const LEVEL_TEXT = {
@@ -534,8 +565,10 @@ const LEVEL_TEXT = {
 function systemPrompt(){
   const ctx = session.mode === "free"
     ? `FREE CHAT. Start by bringing up this topic naturally: ${session.text}. Let the chat drift wherever the learner takes it, like two friends talking. If it stalls, move to a new everyday topic.`
+    : session.mode === "story"
+    ? `STORY TIME: Tell the German folk tale "${session.text}" in your own very simple words, in small parts of 2–3 short sentences. Begin with one line about where the story comes from. After each part, stop and ask the learner one easy question (about the story, or what they think happens next). When they answer, react briefly to what they said, then continue. Finish in about 6–8 parts, then chat with the learner about the story.`
     : `ROLE-PLAY: ${session.text}`;
-  return `You are Lena, a warm, curious German friend helping an adult beginner from India (Bengaluru) build speaking fluency. The learner is also learning on Duolingo.
+  return `You are Lena, a warm, curious German friend helping an adult learner from India build speaking fluency through natural conversation. They may be a complete beginner or may already know some German from elsewhere; adapt to what they can actually say. This is not a structured course: the learner picks up words by using them.
 
 ${ctx}
 
@@ -547,7 +580,7 @@ FOCUS WORDS (the learner's least-practised words): ${focusWords().join(", ")}
 - Weave one or two focus words naturally into each reply, and ask questions that invite the learner to use them.
 
 HOW TO REPLY
-- Natural, friendly spoken German. Build mainly from the known words.
+- Natural, friendly spoken German. Build mainly from the known words; if the list is short, keep sentences very simple and bring in useful everyday words gradually.
 - Introduce at most 2 new words per reply and list them in new_words.
 - Usually end with one easy question so the learner has something to answer.
 - Share a little about yourself too, so it feels like a real conversation, not an interview.
@@ -563,9 +596,10 @@ GLOSSARY: for EVERY word in reply_de, give its English meaning as used in this s
 WORD TRACKING (use the exact spelling from the WORDS THE LEARNER KNOWS list; match inflected forms to their list entry, e.g. "trinke" -> "trinken"):
 - learner_used: every listed word the learner used in their latest message, with ok=false if they used that word wrongly (wrong form, ending, article or meaning).
 - lena_used: every listed word you used in reply_de.
+- learner_new: German words NOT in the list that the learner used correctly in their latest message (dictionary form, max 5, no names of people or places), with their English meaning.
 
 Reply with ONLY JSON, no markdown:
-{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning", "base": "dictionary form"}], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"]}`;
+{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning", "base": "dictionary form"}], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"], "learner_new": [{"w": "dictionary form", "en": "meaning"}]}`;
 }
 function parseJSON(text){
   if (!text) throw new Error("Empty answer");
@@ -661,8 +695,8 @@ let session = null, turns = [], busy = false, ctl = null, fixes = [], newWords =
 const msgs = $("msgs");
 function scrollDown(){ const s = $("chat"); s.scrollTop = s.scrollHeight; }
 function afterSpeak(){
-  if ((S.hands || loop) && current === "chat" && !busy) setTimeout(() => { if (!listening && current === "chat") startListening(); }, 250);
-  else if (phase === "speaking") setPhase("paused");
+  if (S.autoListen && current === "chat" && !busy) setTimeout(() => { if (!listening && current === "chat") startListening(); }, 250);
+  else if (current === "chat") setPhase("paused");
 }
 function tutorBubble(d){
   const el = document.createElement("div"); el.className = "msg t";
@@ -696,6 +730,7 @@ async function ask(userEl, userText){
     if (userEl) { markUser(userEl, d.correction); if (d.correction && d.correction.corrected) fixes.push({ you: userText, better: d.correction.corrected, why: d.correction.note || "" }); }
     (d.new_words || []).forEach(w => w && w.de && newWords.push({ de: String(w.de), en: String(w.en || "") }));
     trackUsage(userEl ? d.learner_used : null, d.lena_used);
+    if (userEl) learnFromLearner(d.learner_new);
     turns.push({ role: "assistant", content: d.reply_de });
     busy = false; $("sendBtn").disabled = false;
     tutorBubble(d);
@@ -709,7 +744,7 @@ async function ask(userEl, userText){
 }
 function startChat(s){
   stopAll(); session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = ""; loop = !S.adv;
-  $("handsBtn").classList.toggle("on", S.hands);
+  $("handsBtn").classList.toggle("on", S.autoListen);
   show("chat", S.adv ? s.title : "Lena");
   if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
   ask(null, null);
@@ -791,7 +826,7 @@ function renderVoiceList(){
 function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
-  $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("testOut").textContent = "";
+  $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
   renderVoiceList(); renderAccount();
 }
 $("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
@@ -801,6 +836,7 @@ $("voice").onchange = () => { S.voice = $("voice").value; persist("voice"); };
 $("rate").oninput = () => { S.rate = +$("rate").value; $("rateOut").textContent = S.rate.toFixed(2) + "×"; persist("rate"); };
 $("autoSpeak").onchange = () => { S.autoSpeak = $("autoSpeak").checked; persist("autoSpeak"); };
 $("autoSend").onchange = () => { S.autoSend = $("autoSend").checked; persist("autoSend"); };
+$("autoListen").onchange = () => { S.autoListen = $("autoListen").checked; persist("autoListen"); };
 $("voiceTest").onclick = () => speak("Hallo! Ich bin Lena. Wie geht es dir?");
 $("testBtn").onclick = async () => {
   S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model");
@@ -809,6 +845,21 @@ $("testBtn").onclick = async () => {
   try { const t = await callLLM('Reply with ONLY JSON: {"ok": true}', [{ role: "user", content: "Test" }]); parseJSON(t); $("testOut").textContent = "Works ✓ (" + S.model + ")"; }
   catch (e) { $("testOut").textContent = e.message; }
 };
+
+/* ---------- the word list grows from what the learner says ---------- */
+function learnFromLearner(list){
+  if (!Array.isArray(list) || !list.length) return;
+  const known = new Set(allWords().map(w => w.toLowerCase())); const add = [];
+  list.slice(0, 5).forEach(x => { const w = String(x && x.w || "").trim(); if (!w || w.length > 40 || known.has(w.toLowerCase())) return; known.add(w.toLowerCase()); add.push(w); if (x.en) S.en[w] = String(x.en); });
+  if (!add.length) return;
+  S.added = [...S.added, ...add]; add.forEach(w => { bump(w, "s"); bump(w, "c"); });
+  persist("added"); persist("en"); persist("stats");
+}
+function seedWords(){
+  if (S.seeded) return;
+  if (isAdmin()) { const have = new Set(allWords().map(w => w.toLowerCase())); S.added = [...S.added, ...SAURYA_WORDS.filter(w => !have.has(w.toLowerCase()))]; persist("added"); }
+  S.seeded = true; persist("seeded");
+}
 
 /* ---------- word warmth: how well each word is known ---------- */
 // Per word: s = times you said it, c = said correctly, x = said wrongly, l = heard from Lena,
@@ -997,6 +1048,7 @@ async function onUser(u){
       SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } });
     }
     userRef = ref;
+    seedWords();
     if (!snap.exists || (!snap.data().key && S.key)) syncNow();
     show("home");
   } catch (e) {
