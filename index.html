@@ -113,18 +113,52 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .field small{color:var(--muted)}
 .toggle{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-weight:600}
 .toggle input{width:22px;height:22px;accent-color:var(--accent)}
+.logo-img{width:32px;height:32px;border-radius:8px;flex:none}
+.ver{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums}
+.switch{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 10px 5px 6px;font-size:13px;font-weight:700;color:var(--muted)}
+.switch i{width:28px;height:16px;border-radius:8px;background:var(--line);position:relative;flex:none}
+.switch i::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--surface);transition:left .15s}
+.switch.on{color:var(--accent);border-color:var(--accent)}
+.switch.on i{background:var(--accent)}
+.switch.on i::after{left:14px}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding-block:24px}
+.big-btn{width:min(56vw,220px);aspect-ratio:1;max-width:100%;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;box-shadow:0 10px 30px rgba(29,79,176,.28),0 0 0 10px var(--accent-soft)}
+.big-btn svg{width:38%;height:38%}
+.big-btn:active{transform:scale(.97)}
+.center .hello{font-size:28px;font-weight:800;font-stretch:115%;margin:0}
+.center .sub-en{font-family:var(--f-en);font-style:italic;color:var(--muted);font-size:17px;margin:0}
+.center .setup{margin-top:4px}
+.simplebar{display:flex;align-items:center;justify-content:center;gap:16px;padding-block:6px}
+.orb{width:84px;height:84px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);flex:none;transition:background .2s}
+.orb svg{width:34px;height:34px}
+.orb.listening{background:var(--live);color:#fff;animation:pulse 1.2s ease-in-out infinite}
+.orb.thinking{background:var(--muted);color:var(--bg)}
+.orb.speaking{background:var(--ok);color:#fff}
+.phase{min-width:0;flex:1;max-width:220px;font-size:15px;font-weight:650}
+.phase small{display:block;font-weight:400;color:var(--muted);font-size:13px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="bar pad">
-    <span class="logo" aria-hidden="true">L</span>
+    <img class="logo-img" src="icon-192.png" alt="">
     <h1 id="title">Lena</h1>
+    <span class="ver" id="ver"></span>
     <button class="ghost" id="backBtn" hidden>Home</button>
     <button class="ghost" id="endBtn" hidden>Finish</button>
     <button class="ghost" id="setBtn">Settings</button>
+    <button class="switch" id="advBtn" aria-pressed="false"><i></i>Advanced</button>
   </header>
+
+  <main class="pad center" id="simple" hidden>
+    <p class="hello" lang="de">Hallo! Ich bin Lena.</p>
+    <button class="big-btn" id="goBtn" aria-label="Start talking with Lena">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <p class="sub-en">Tap and just start talking.</p>
+    <button class="ghost setup" id="setupBtn" hidden>Set up Lena's key first</button>
+  </main>
 
   <main class="scroll pad" id="home">
     <div class="notice" id="needKey" hidden>Lena needs a key before she can talk. Open <b>Settings</b> and paste your Gemini (free) or Claude key.</div>
@@ -145,6 +179,13 @@ p.lead{color:var(--muted);margin:0 0 16px}
 
   <main class="scroll pad" id="chat" hidden><div class="msgs" id="msgs"></div></main>
   <footer class="composer pad" id="composer" hidden>
+    <div class="simplebar" id="simpleBar">
+      <button class="orb" id="orbBtn" aria-label="Talk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <div class="phase" id="phase">Starting…<small></small></div>
+    </div>
+    <div id="advBar">
     <div class="row">
       <button class="mic" id="micBtn" aria-label="Tap and speak German">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
@@ -156,6 +197,7 @@ p.lead{color:var(--muted);margin:0 0 16px}
       <button class="chip" id="hintBtn">Help me answer</button>
       <button class="chip" id="handsBtn">Hands-free</button>
       <span class="status" id="status"></span>
+    </div>
     </div>
   </footer>
 
@@ -225,7 +267,9 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
+const VERSION = "1.2.0";
 const $ = id => document.getElementById(id);
+$("ver").textContent = "v" + VERSION;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const dayKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const today = () => dayKey(new Date());
@@ -238,7 +282,7 @@ const store = {
 const S = {
   provider: store.get("provider","gemini"), key: store.get("key",""), level: store.get("level","A1"),
   voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
-  hands: store.get("hands",false), model: store.get("model",""),
+  hands: store.get("hands",false), model: store.get("model",""), adv: store.get("adv",false),
   added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[])
 };
 const persist = k => store.set(k, S[k]);
@@ -246,20 +290,28 @@ const allWords = () => [...new Set([...BASE_WORDS, ...S.added])];
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
 /* ---------- views ---------- */
-const VIEWS = ["home","chat","words","summary","settings"];
+const VIEWS = ["simple","home","chat","words","summary","settings"];
 let current = "home";
 function show(v, title){
+  if (v === "home" && !S.adv) v = "simple";
   current = v;
   VIEWS.forEach(x => $(x).hidden = x !== v);
+  const isHome = v === "home" || v === "simple";
   $("composer").hidden = v !== "chat";
-  $("backBtn").hidden = v === "home";
+  $("simpleBar").hidden = S.adv; $("advBar").hidden = !S.adv;
+  $("backBtn").hidden = isHome;
   $("endBtn").hidden = v !== "chat";
-  $("setBtn").hidden = v === "settings" || v === "chat";
+  $("setBtn").hidden = !(S.adv && v === "home");
+  $("advBtn").hidden = !isHome;
+  $("advBtn").classList.toggle("on", S.adv); $("advBtn").setAttribute("aria-pressed", String(S.adv));
   $("title").textContent = title || "Lena";
-  if (v === "home") renderHome();
+  if (isHome) renderHome();
 }
+$("advBtn").onclick = () => { S.adv = !S.adv; persist("adv"); show("home"); };
+$("goBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startChat({ title: "Einfach reden", mode: "free", text: pickTopic() }); };
+$("setupBtn").onclick = () => { renderSettings(); show("settings", "Settings"); };
 function renderHome(){
-  $("needKey").hidden = !!S.key;
+  $("needKey").hidden = !!S.key; $("setupBtn").hidden = !!S.key;
   $("sStreak").textContent = streak(); $("sWords").textContent = allWords().length; $("sSessions").textContent = S.sessions;
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
@@ -300,7 +352,21 @@ function speak(text, rate, onEnd){
 /* ---------- voice in ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, listening = false, heard = "";
-function setStatus(t){ $("status").textContent = t || ""; }
+function setStatus(t){ $("status").textContent = t || ""; $("phase").querySelector("small").textContent = t || ""; }
+let phase = "idle", loop = false;
+const PHASES = { listening: "Ich höre zu…", thinking: "Lena denkt nach…", speaking: "Lena spricht…", paused: "Tap the button to talk", idle: "" };
+function setPhase(p, note){
+  phase = p; const o = $("orbBtn"); o.className = "orb" + (p === "listening" || p === "thinking" || p === "speaking" ? " " + p : "");
+  $("phase").firstChild.textContent = PHASES[p] || "";
+  $("phase").querySelector("small").textContent = note || (p === "listening" ? "Speak German now. Tap to send." : p === "speaking" ? "Tap to interrupt and answer." : "");
+}
+$("orbBtn").onclick = () => {
+  unlockAudio();
+  if (phase === "thinking") return;
+  if (listening) { try { rec.stop(); } catch {} return; }
+  if (phase === "speaking") { try { speechSynthesis.cancel(); } catch {} }
+  loop = true; startListening();
+};
 function startListening(){
   if (!SR) { setStatus("Speech input needs Chrome."); return; }
   if (listening || busy) return;
@@ -317,9 +383,10 @@ function startListening(){
   rec.onend = () => {
     listening = false; $("micBtn").classList.remove("live");
     if (status_isListening()) setStatus("");
-    if (heard.trim() && (S.autoSend || S.hands)) send();
+    if (heard.trim() && (S.autoSend || S.hands || loop)) send();
+    else if (phase === "listening") setPhase("paused", $("status").textContent);
   };
-  try { rec.start(); listening = true; $("micBtn").classList.add("live"); setStatus("Listening… sprich jetzt"); } catch { setStatus("Couldn't start the mic. Tap again."); }
+  try { rec.start(); listening = true; $("micBtn").classList.add("live"); setPhase("listening"); if (S.adv) setStatus("Listening… sprich jetzt"); } catch { setPhase("paused", "Couldn't start the mic. Tap again."); }
 }
 function status_isListening(){ return $("status").textContent.startsWith("Listening"); }
 $("micBtn").onclick = () => { if (listening) { try { rec.stop(); } catch {} } else startListening(); };
@@ -451,7 +518,10 @@ function history(extra){
 let session = null, turns = [], busy = false, ctl = null, fixes = [], newWords = [];
 const msgs = $("msgs");
 function scrollDown(){ const s = $("chat"); s.scrollTop = s.scrollHeight; }
-function afterSpeak(){ if (S.hands && current === "chat" && !busy) setTimeout(startListening, 250); }
+function afterSpeak(){
+  if ((S.hands || loop) && current === "chat" && !busy) setTimeout(() => { if (!listening && current === "chat") startListening(); }, 250);
+  else if (phase === "speaking") setPhase("paused");
+}
 function tutorBubble(d){
   const el = document.createElement("div"); el.className = "msg t";
   const nw = (d.new_words || []).filter(w => w && w.de);
@@ -465,7 +535,7 @@ function tutorBubble(d){
     if (a === "en") { const en = el.querySelector(".en-text"); en.hidden = !en.hidden; e.target.classList.toggle("on", !en.hidden); scrollDown(); }
   };
   msgs.appendChild(el); scrollDown();
-  if (S.autoSpeak) speak(d.reply_de, null, afterSpeak); else afterSpeak();
+  if (S.autoSpeak || loop) { setPhase("speaking"); speak(d.reply_de, null, afterSpeak); } else afterSpeak();
 }
 function userBubble(text){ const el = document.createElement("div"); el.className = "msg u"; el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${esc(text)}</div></div>`; msgs.appendChild(el); scrollDown(); return el; }
 function markUser(el, c){
@@ -474,7 +544,7 @@ function markUser(el, c){
 }
 async function ask(userEl, userText){
   if (!S.key) { show("home"); return; }
-  busy = true; $("sendBtn").disabled = true; setStatus("");
+  busy = true; $("sendBtn").disabled = true; setStatus(""); setPhase("thinking");
   const tEl = document.createElement("div"); tEl.className = "msg t"; tEl.innerHTML = `<div class="bub typing" lang="de">Lena denkt nach…</div>`; msgs.appendChild(tEl); scrollDown();
   ctl = new AbortController();
   try {
@@ -488,15 +558,16 @@ async function ask(userEl, userText){
     tutorBubble(d);
   } catch (e) {
     busy = false; $("sendBtn").disabled = false;
-    if (e.name === "AbortError") { tEl.remove(); return; }
+    if (e.name === "AbortError") { tEl.remove(); setPhase("paused"); return; }
     tEl.querySelector(".bub").innerHTML = `<span class="err">${esc(e.message || "Lena didn't answer. Try again.")}</span>`;
+    setPhase("paused", "Tap to try again.");
     if (userEl) { turns.pop(); userEl.remove(); $("input").value = userText; grow(); }
   }
 }
 function startChat(s){
-  stopAll(); session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = "";
+  stopAll(); session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = ""; loop = !S.adv;
   $("handsBtn").classList.toggle("on", S.hands);
-  show("chat", s.title);
+  show("chat", S.adv ? s.title : "Lena");
   if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
   ask(null, null);
 }
@@ -512,7 +583,7 @@ $("sendBtn").onclick = send;
 $("input").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 function grow(){ const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }
 $("input").oninput = grow;
-function stopAll(){ try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
+function stopAll(){ loop = false; try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
 
 $("hintBtn").onclick = async () => {
   if (busy || !turns.length) return;
