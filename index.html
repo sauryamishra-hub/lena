@@ -538,7 +538,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.9.0";
+const VERSION = "1.9.1";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -709,6 +709,7 @@ function setPhase(p, note){
 $("orbBtn").onclick = () => {
   unlockAudio();
   if (phase === "thinking") return;
+  if (retry && !listening && !busy && retryLast()) return;
   if (listening) { try { rec.stop(); } catch {} return; }
   if (phase === "speaking") { try { speechSynthesis.cancel(); } catch {} }
   loop = true; startListening();
@@ -907,9 +908,10 @@ async function ask(userEl, userText){
   if (!S.key) { show("home"); return; }
   busy = true; $("sendBtn").disabled = true; setStatus(""); setPhase("thinking");
   const tEl = document.createElement("div"); tEl.className = "msg t"; tEl.innerHTML = `<div class="bub typing" lang="de">Lena denkt nach…</div>`; msgs.appendChild(tEl); scrollDown();
-  ctl = new AbortController();
+  const myCtl = ctl = new AbortController(); retry = null;
   try {
-    const d = parseJSON(await callLLM(systemPrompt(), history(), ctl.signal));
+    const d = parseJSON(await callLLM(systemPrompt(), history(), myCtl.signal));
+    if (ctl !== myCtl) return;
     if (typeof d.reply_de !== "string") throw new Error("Couldn't read Lena's answer");
     tEl.remove();
     if (userEl) { markUser(userEl, d.correction); if (d.correction && d.correction.corrected) fixes.push({ you: userText, better: d.correction.corrected, why: d.correction.note || "" }); }
@@ -920,15 +922,26 @@ async function ask(userEl, userText){
     busy = false; $("sendBtn").disabled = false;
     tutorBubble(d);
   } catch (e) {
+    if (ctl !== myCtl) return;
     busy = false; $("sendBtn").disabled = false;
     if (e.name === "AbortError") { tEl.remove(); setPhase("paused"); return; }
+    retry = { userText, tEl };
     tEl.querySelector(".bub").innerHTML = `<span class="err">${esc(e.message || "Lena didn't answer. Try again.")}</span>`;
     setPhase("paused", "Tap to try again.");
-    if (userEl) { turns.pop(); userEl.remove(); $("input").value = userText; grow(); }
+    if (userEl) { turns.pop(); userEl.remove(); if (S.adv) { $("input").value = userText; grow(); } }
   }
 }
+// After a failed answer, the big button resends (or re-asks for Lena's opening) instead of opening the mic.
+let retry = null;
+function retryLast(){
+  const r = retry; retry = null; if (!r) return false;
+  r.tEl.remove();
+  if (r.userText) { const el = userBubble(r.userText); turns.push({ role: "user", content: r.userText }); ask(el, r.userText); }
+  else ask(null, null);
+  return true;
+}
 function startChat(s){
-  stopAll(); session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = ""; loop = !S.adv;
+  stopAll(); retry = null; session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = ""; loop = !S.adv;
   $("handsBtn").classList.toggle("on", S.autoListen);
   show("chat", S.adv ? s.title : "Lena");
   if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
@@ -939,6 +952,7 @@ function send(){
   if (listening) { try { rec.abort(); } catch {} }
   $("input").value = ""; grow();
   msgs.querySelectorAll(".hintbox").forEach(h => h.remove());
+  if (retry) { retry.tEl.remove(); retry = null; }
   const el = userBubble(text); turns.push({ role: "user", content: text });
   ask(el, text);
 }
@@ -964,7 +978,7 @@ $("hintBtn").onclick = async () => {
 $("endBtn").onclick = () => {
   stopAll();
   const mine = turns.filter(t => t.role === "user").length;
-  S.sessions += 1; persist("sessions");
+  if (mine > 0) { S.sessions += 1; persist("sessions"); }
   if (fixes.length) { S.mistakes = [...fixes.map(f => ({ ...f, at: today() })), ...S.mistakes].slice(0, 200); persist("mistakes"); }
   const known = new Set(allWords().map(w => w.toLowerCase())); const seen = new Set();
   const fresh = newWords.filter(w => { const k = w.de.toLowerCase(); if (known.has(k) || seen.has(k)) return false; seen.add(k); return true; });
@@ -1244,8 +1258,8 @@ function showObResult(est, lvl){
   $("ob1").hidden = true; $("ob2").hidden = true; $("ob3").hidden = false;
   const label = { "A1": "Beginner (A1)", "A1+": "Beginner+ (A1+)", "A2": "Elementary (A2)" }[lvl];
   const guessNote = S.placement && S.placement.guess > 0.34 ? `<p class="hint">You said you knew some of the made-up words, so Lena will start a little easier and find out as you talk.</p>` : "";
-  $("ob3").innerHTML = est
-    ? `<p class="label">Your starting point</p><div class="obres">≈ ${est}</div><p class="lead" style="margin-top:6px">German words you probably know. Lena will start at <b>${label}</b> and adjust as you talk.</p>${guessNote}`
+  $("ob3").innerHTML = est || OB.ans !== "never"
+    ? `<p class="label">Your starting point</p><div class="obres">${est ? "≈ " + est : "Los geht's!"}</div><p class="lead" style="margin-top:6px">${est ? "German words you probably know. " : ""}Lena will start at <b>${label}</b> and adjust as you talk.</p>${guessNote}`
     : `<p class="label">Your starting point</p><div class="obres">Los geht's!</div><p class="lead" style="margin-top:6px">Starting from zero is perfect. In your first chats Lena will teach a few everyday words at a time, with English help, and you'll use each one straight away.</p>`;
   $("ob3").innerHTML += `<div class="links"><button class="send" id="obChat">Start my first chat</button><button class="ghost" id="obHome">Go to home</button></div>`;
   $("obChat").onclick = () => finishOnboarding(true);
@@ -1287,6 +1301,7 @@ async function loadNews(force){
   const key = "news:" + today() + ":" + S.level;
   const cached = store.get(key, null);
   $("newsDate").textContent = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+  try { Object.keys(localStorage).filter(k => k.startsWith("lena:news:") && !k.startsWith("lena:news:" + today())).forEach(k => localStorage.removeItem(k)); } catch {}
   if (cached && !force) { renderNews(cached); return; }
   if (newsBusy) return;
   if (!S.key) { $("newsBody").innerHTML = `<p class="lead">Lena needs your AI key to rewrite the news. Add it in Settings.</p>`; return; }
