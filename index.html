@@ -286,6 +286,15 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .bw i{font-family:var(--f-en);color:var(--muted);font-size:13px}
 .bw:active{background:var(--gold-soft)}
 .hint-en{font-family:var(--f-en);font-style:italic;color:var(--muted);font-size:.9em}
+/* English words inside the learner's (inverted) bubble */
+.enw{color:#8AB4FF;font-style:italic;text-decoration:underline dotted;text-underline-offset:3px}
+:root[data-theme="dark"] .enw{color:#1F5FBF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .enw{color:#1F5FBF}}
+.orb.listening{box-shadow:0 0 0 calc(var(--lvl,0) * 26px) rgba(213,43,30,.22)}
+.msg.u.voice .de-text{color:var(--muted)}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:45;background:var(--ink);color:var(--bg);padding:12px 16px;font-weight:600;font-size:15px;animation:vtUp .25s ease-out}
+.learnta{width:100%;box-sizing:border-box;border:var(--bw) solid var(--line);background:var(--surface);color:var(--ink);padding:10px 12px;font:inherit;font-size:16px;resize:vertical}
+#shotOut .card{margin-top:10px}
 @media (max-width:420px){.bar .ver{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -318,7 +327,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <button class="disc" id="goBtn" aria-label="Start talking with Lena">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
     </button>
-    <p class="sub-en tapcap">Tap and start talking</p>
+    <p class="sub-en tapcap" id="tapCap">Tap and start talking</p>
     <button class="send setup" id="setupBtn" hidden>Set up Lena's key first</button>
     <div class="foot1">
       <button class="edge" id="toNews" aria-label="Open the news"><span aria-hidden="true">‹</span> Nachrichten</button>
@@ -329,7 +338,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 
   <main class="scroll pad" id="home">
     <div class="notice" id="needKey" hidden>Lena needs a key before she can talk. Open <b>Settings</b> and paste your Gemini (free) or Claude key.</div>
-    <button class="hero prime" id="talkBtn"><span class="big" lang="de">Einfach reden</span><span class="small">Free chat. Lena picks an everyday topic.</span></button>
+    <button class="hero prime" id="talkBtn"><span class="big" lang="de">Einfach reden</span><span class="small" id="talkSmall">Free chat. Lena picks an everyday topic.</span></button>
     <div class="topicrow">
       <input type="text" id="topicInput" placeholder="…or name a topic: cricket, Diwali, work" autocomplete="off">
       <button class="send" id="topicBtn">Talk</button>
@@ -348,6 +357,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="grid" id="stories"></div>
     <button class="rowlink" id="newsBtn">Nachrichten · today's news in simple German <span aria-hidden="true">›</span></button>
     <button class="rowlink" id="wordsBtn" style="margin-top:8px">My words &amp; mistakes <span aria-hidden="true">›</span></button>
+    <button class="rowlink" id="learnBtn" style="margin-top:8px">I learned new words (Duolingo, class…) <span aria-hidden="true">›</span></button>
     <div class="soon"><span>Characters · Round table<small>Talk with different Germans, or with a whole table at once.</small></span><em>Bald</em></div>
   </main>
 
@@ -381,8 +391,13 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="heat" id="heatBar2"></div>
     <div class="legend" id="heatLegend2"></div>
     <div class="links" style="margin:16px 0 20px"><button class="send" id="drillCold">Drill my coldest words</button></div>
-    <p class="label">Add words (comma-separated)</p>
-    <div class="addrow"><input type="text" id="addInput" placeholder="Apfel, morgen, ich möchte" lang="de"><button class="send" id="addBtn">Add</button></div>
+    <div id="learnBox">
+      <p class="label">Learned new words? (Duolingo, a class, a book)</p>
+      <textarea id="addInput" class="learnta" rows="3" placeholder="Type or paste them: Apfel, morgen, ich möchte… (one per line is fine too)" lang="de" autocapitalize="off"></textarea>
+      <div class="links" style="margin:8px 0 6px"><button class="send" id="addBtn">Add words</button><button class="ghost" id="shotBtn">From a screenshot</button><input type="file" id="shotFile" accept="image/*" hidden></div>
+      <p class="hint">Tip: in Duolingo, open your word list, take a screenshot and add it here. Or just tell Lena in a chat: “I learned Apfel and Banane today.”</p>
+      <div id="shotOut"></div>
+    </div>
     <div id="wordList"></div>
     <h2 style="margin-top:32px">Useful next words</h2>
     <p class="lead">The most common everyday words you haven't picked up yet. Lena brings these into chats when they fit. Tap one to add it now.</p>
@@ -482,10 +497,13 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 
     <p class="label">Conversation</p>
     <div class="sgroup">
+      <div class="srow"><label for="hear">Understanding my speech</label><select id="hear"><option value="ai">Lena's AI (best)</option><option value="phone">Phone (live text)</option></select></div>
       <div class="srow"><label for="autoSpeak">Read Lena's replies aloud</label><span class="tg"><input type="checkbox" id="autoSpeak"><i></i></span></div>
       <div class="srow"><label for="autoListen">Mic on by itself after Lena speaks</label><span class="tg"><input type="checkbox" id="autoListen"><i></i></span></div>
-      <div class="srow"><label for="autoSend">Send when I stop speaking</label><span class="tg"><input type="checkbox" id="autoSend"><i></i></span></div>
+      <div class="srow"><label for="autoSend">Advanced, phone speech: send as soon as the mic stops</label><span class="tg"><input type="checkbox" id="autoSend"><i></i></span></div>
     </div>
+
+    <small class="hint">Lena's AI understands accents and German mixed with English. The mic stays on until you tap the button again.</small>
 
     <div id="inviteBox" hidden>
       <p class="label">Friends</p>
@@ -500,6 +518,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
   </main>
 </div>
 <div class="pop" id="pop" hidden></div>
+<div class="toast" id="toast" hidden role="status"></div>
 
 <script src="vocab.js"></script>
 <script>
@@ -539,7 +558,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.9.4";
+const VERSION = "2.0.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -548,7 +567,7 @@ function applyTheme(t){
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", dark ? "#0F1013" : "#EEEDEA"));
   document.querySelectorAll("#themeSeg button").forEach(b => b.classList.toggle("on", b.dataset.theme === (t || "system")));
 }
-try { applyTheme(JSON.parse(localStorage.getItem("lena:theme")) || "system"); } catch { applyTheme("system"); }
+try { applyTheme(JSON.parse(localStorage.getItem("lena:theme")) || "light"); } catch { applyTheme("light"); }
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -570,17 +589,27 @@ const store = {
   get(k, d){ try { const v = localStorage.getItem("lena:"+k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v){ try { localStorage.setItem("lena:"+k, JSON.stringify(v)); } catch {} }
 };
-const S = {
-  provider: store.get("provider","gemini"), key: store.get("key",""), level: store.get("level","A1"),
-  voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
-  autoListen: store.get("autoListen",false), theme: store.get("theme","system"), seeded: store.get("seeded",false), recentStories: store.get("recentStories",[]), model: store.get("model",""), adv: store.get("adv",false),
-  added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[]),
-  stats: store.get("stats",{}), en: store.get("en",{}), onboarded: store.get("onboarded",false), placement: store.get("placement",null)
+const DEFAULTS = {
+  provider: "gemini", key: "", level: "A1", voice: "", rate: 0.9, autoSpeak: true, autoSend: false, autoListen: false, theme: "light",
+  seeded: false, recentStories: [], model: "", adv: false, added: [], mistakes: [], days: [], sessions: 0, recentTopics: [],
+  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false
 };
-const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
+const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
+const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories"];
 let userRef = null, syncTimer = null;
-const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
-function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
+// Everything that matters is saved to the account (Firestore), so uninstalling or changing phones loses nothing.
+const persist = k => { store.set(k, S[k]); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
+function syncNow(){
+  if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k] === undefined ? null : S[k]);
+  d.updatedAt = store.get("updatedAt", Date.now());
+  userRef.set(JSON.parse(JSON.stringify(d)), { merge: true }).then(() => store.set("lastSync", Date.now())).catch(() => {});
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && userRef) { clearTimeout(syncTimer); syncNow(); } });
+// New defaults (no auto-send, light theme) applied once per account.
+function migratePrefs(){ if (S.prefsV2) return; S.autoSend = false; if (S.theme === "system") S.theme = "light"; S.prefsV2 = true; ["autoSend", "theme", "prefsV2"].forEach(persist); applyTheme(S.theme); }
+migratePrefs();
+// A different person signing in on this phone starts from their own account, not the last person's progress.
+function resetLocal(){ SYNCED.forEach(k => { if (k === "key" || k === "provider") return; S[k] = structuredClone(DEFAULTS[k]); store.set(k, S[k]); }); try { Object.keys(localStorage).filter(k => k.startsWith("lena:news:")).forEach(k => localStorage.removeItem(k)); } catch {} }
 const allWords = () => [...new Set([...BASE_WORDS, ...S.added])];
 
 /* ---------- word bank: the most useful German words, ranked by how common they are ---------- */
@@ -648,10 +677,12 @@ function animateIn(...els){
   els.filter(Boolean).forEach(el => { el.classList.remove("vt-fade", "vt-right", "vt-left", "vt-up"); void el.offsetWidth; el.classList.add(cls); });
 }
 $("advBtn").onclick = () => { S.adv = !S.adv; persist("adv"); show("home"); };
-$("goBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startChat({ title: "Einfach reden", mode: "free", text: pickTopic() }); };
+$("goBtn").onclick = openTalk;
 $("setupBtn").onclick = () => { renderSettings(); show("settings", "Settings"); };
 function renderHome(){
   $("needKey").hidden = !!S.key; $("setupBtn").hidden = !!S.key;
+  $("tapCap").textContent = S.chat ? "Tap to carry on your chat" : "Tap and start talking";
+  $("talkSmall").textContent = S.chat ? "Carry on where you left off." : "Free chat. Lena picks an everyday topic.";
   $("sStreak").textContent = streak(); $("sSessions").textContent = S.sessions;
   const h = heatCounts(); $("sWords").textContent = h.warm + h.hot;
   renderHeat("heatBar", "heatLegend");
@@ -663,7 +694,7 @@ $("stories").onclick = e => { const b = e.target.closest(".story"); if (b) start
 $("storyBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startStory(pickStory()); };
 function pickStory(){ const pool = STORIES.filter(x => !S.recentStories.includes(x.de)); const st = (pool.length ? pool : STORIES)[Math.floor(Math.random() * (pool.length || STORIES.length))]; S.recentStories = [st.de, ...S.recentStories].slice(0, 6); persist("recentStories"); return st; }
 function startStory(st){ startChat({ title: st.de, mode: "story", text: st.de }); }
-$("talkBtn").onclick = () => startChat({ title: "Einfach reden", mode: "free", text: pickTopic() });
+$("talkBtn").onclick = openTalk;
 $("topicBtn").onclick = () => { const t = $("topicInput").value.trim(); if (!t) { $("topicInput").focus(); return; } $("topicInput").value = ""; startChat({ title: "Einfach reden", mode: "free", text: t }); };
 $("topicInput").onkeydown = e => { if (e.key === "Enter") $("topicBtn").click(); };
 $("backBtn").onclick = () => { stopAll(); show("home"); };
@@ -710,35 +741,85 @@ function setPhase(p, note){
 $("orbBtn").onclick = () => {
   unlockAudio();
   if (phase === "thinking") return;
-  if (retry && !listening && !busy && retryLast()) return;
-  if (listening) { try { rec.stop(); } catch {} return; }
+  if (retry && !listening && !recording && !busy && retryLast()) return;
+  if (recording) { stopRecording(true); return; }
+  if (listening) { stopPhone(); return; }
   if (phase === "speaking") { try { speechSynthesis.cancel(); } catch {} }
   loop = true; startListening();
 };
+// Two ways to hear the learner: Lena's AI listens to the recording (best for accents and German mixed with English),
+// or the phone's own speech recognition (shows words live). Either way the mic stays on until the learner taps.
+const useAI = () => S.hear !== "phone" && S.provider === "gemini" && !!window.MediaRecorder && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 function startListening(){
-  if (!SR) { setStatus("Speech input needs Chrome."); return; }
-  if (listening || busy) return;
-  try { speechSynthesis.cancel(); } catch {}
-  heard = "";
-  rec = new SR(); rec.lang = "de-DE"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
-  const before = $("input").value.trim();
-  rec.onresult = e => { let t = ""; for (const r of e.results) t += r[0].transcript; heard = t; $("input").value = (before ? before + " " : "") + t; grow(); };
-  rec.onerror = e => {
-    if (e.error === "not-allowed" || e.error === "service-not-allowed") setStatus("Allow the microphone for this site in Chrome.");
-    else if (e.error === "no-speech") setStatus("I didn't hear anything. Tap the mic and try again.");
-    else if (e.error !== "aborted") setStatus("Mic error: " + e.error);
-  };
-  rec.onend = () => {
-    listening = false; $("micBtn").classList.remove("live");
-    if (status_isListening()) setStatus("");
-    if (heard.trim() && (S.autoSend || S.autoListen || loop)) send();
-    else if (phase === "listening") setPhase("paused", $("status").textContent);
-  };
-  try { rec.start(); listening = true; $("micBtn").classList.add("live"); setPhase("listening"); if (S.adv) setStatus("Listening… sprich jetzt"); } catch { setPhase("paused", "Couldn't start the mic. Tap again."); }
+  if (busy || listening || recording) return;
+  if (useAI()) { startRecording(); return; }
+  if (!SR) { setPhase("paused", "Speech input needs Chrome."); return; }
+  startPhone();
 }
-function status_isListening(){ return $("status").textContent.startsWith("Listening"); }
-$("micBtn").onclick = () => { if (listening) { try { rec.stop(); } catch {} } else startListening(); };
-$("handsBtn").onclick = () => { S.autoListen = !S.autoListen; persist("autoListen"); $("handsBtn").classList.toggle("on", S.autoListen); if (S.autoListen && !listening && !busy) startListening(); };
+const clock = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+let recording = false, mrec = null, mstream = null, mchunks = [], mstart = 0, mtimer = null, mctx = null, mpeak = 0;
+async function startRecording(){
+  recording = true; mpeak = 0;
+  try { speechSynthesis.cancel(); } catch {}
+  try { mstream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch { recording = false; setPhase("paused", "Allow the microphone for this site in Chrome, then tap again."); return; }
+  if (!recording) { mstream.getTracks().forEach(t => t.stop()); return; }
+  const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+  try { mrec = new MediaRecorder(mstream, type ? { mimeType: type, audioBitsPerSecond: 32000 } : {}); } catch { mrec = new MediaRecorder(mstream); }
+  mchunks = []; mrec.ondataavailable = e => { if (e.data && e.data.size) mchunks.push(e.data); };
+  mrec.start(250); mstart = Date.now();
+  try {
+    mctx = new AudioContext(); mctx.resume().catch(() => {}); setTimeout(() => { if (mctx && mctx.state !== "running") mpeak = 1; }, 400);
+    const an = mctx.createAnalyser(); an.fftSize = 512; mctx.createMediaStreamSource(mstream).connect(an);
+    const buf = new Uint8Array(an.fftSize);
+    const tick = () => { if (!recording) { document.documentElement.style.setProperty("--lvl", 0); return; } an.getByteTimeDomainData(buf); let sum = 0; for (const v of buf) { const x = (v - 128) / 128; sum += x * x; } const rms = Math.sqrt(sum / buf.length); mpeak = Math.max(mpeak, rms); document.documentElement.style.setProperty("--lvl", Math.min(1, rms * 6).toFixed(2)); requestAnimationFrame(tick); };
+    tick();
+  } catch { mpeak = 1; }
+  $("micBtn").classList.add("live"); setPhase("listening", "0:00 · Speak German (English words are fine). Tap when you're done.");
+  const upd = () => { const t = clock(Date.now() - mstart); if (phase === "listening") $("phase").querySelector("small").textContent = t + " · Speak German (English words are fine). Tap when you're done."; if (S.adv) $("status").textContent = "Recording " + t + " — tap the mic when you're done"; if (Date.now() - mstart > 120000) stopRecording(true); };
+  upd(); mtimer = setInterval(upd, 500);
+}
+function stopRecording(sendIt){
+  if (!recording) return; recording = false; clearInterval(mtimer); $("micBtn").classList.remove("live"); $("status").textContent = "";
+  const mr = mrec, stream = mstream; mrec = null;
+  if (!mr) { setPhase("paused"); return; }
+  mr.onstop = async () => {
+    try { stream.getTracks().forEach(t => t.stop()); } catch {} try { mctx && mctx.close(); } catch {}
+    if (!sendIt) return;
+    const dur = Date.now() - mstart;
+    if (dur < 700 || mpeak < 0.015) { setPhase("paused", "I didn't hear anything. Tap and try again."); return; }
+    const blob = new Blob(mchunks, { type: mr.mimeType || "audio/webm" });
+    const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(",")[1]); fr.readAsDataURL(blob); });
+    sendAudio({ mimeType: (mr.mimeType || "audio/webm").split(";")[0], data });
+  };
+  try { mr.stop(); } catch { setPhase("paused"); }
+}
+// Phone speech recognition, kept running through pauses until the learner taps.
+let phoneWant = false, phoneTapped = false, phoneBase = "", phoneIdle = 0;
+function startPhone(){ phoneWant = true; phoneTapped = false; phoneBase = $("input").value.trim(); phoneIdle = Date.now(); try { speechSynthesis.cancel(); } catch {} runPhone(); }
+function mergeFinal(acc, r){ const a = acc.trim(), b = String(r).trim(); if (!a) return b; if (b.toLowerCase().startsWith(a.toLowerCase())) return b; return a + " " + b; }
+function runPhone(){
+  rec = new SR(); rec.lang = "de-DE"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+  rec.onresult = e => { let fin = "", interim = ""; for (const r of e.results) { if (r.isFinal) fin = mergeFinal(fin, r[0].transcript); else interim += r[0].transcript; } phoneIdle = Date.now();
+    $("input").value = [phoneBase, fin, interim].filter(Boolean).join(" ").replace(/\s+/g, " ").trim(); grow(); };
+  rec.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { phoneWant = false; setStatus("Allow the microphone for this site in Chrome."); } };
+  rec.onend = () => {
+    phoneBase = $("input").value.trim();
+    if (phoneWant && Date.now() - phoneIdle < 30000) { setTimeout(() => { if (phoneWant) { try { runPhone(); } catch { phoneDone(); } } }, 120); return; }
+    phoneDone();
+  };
+  try { rec.start(); listening = true; $("micBtn").classList.add("live"); if (phase !== "listening") setPhase("listening", "Speak German. Take your time — tap when you're done."); if (S.adv) setStatus("Listening… tap the mic when you're done"); }
+  catch { phoneWant = false; listening = false; setPhase("paused", "Couldn't start the mic. Tap again."); }
+}
+function stopPhone(){ phoneWant = false; phoneTapped = true; try { rec.stop(); } catch { phoneDone(); } }
+function phoneDone(){
+  listening = false; phoneWant = false; $("micBtn").classList.remove("live"); setStatus("");
+  const t = $("input").value.trim();
+  if (t && phoneTapped && (!S.adv || S.autoSend)) { send(); return; }
+  setPhase("paused", !t ? "I didn't hear anything. Tap and try again." : S.adv ? "Check the text, then tap Senden." : "Paused. Tap to keep talking, then tap again to send.");
+}
+$("micBtn").onclick = () => { unlockAudio(); if (recording) stopRecording(true); else if (listening) stopPhone(); else startListening(); };
+$("handsBtn").onclick = () => { S.autoListen = !S.autoListen; persist("autoListen"); $("handsBtn").classList.toggle("on", S.autoListen); if (S.autoListen && !listening && !recording && !busy) startListening(); };
 
 /* ---------- the tutor brain ---------- */
 const LEVEL_TEXT = {
@@ -773,6 +854,10 @@ HOW TO REPLY
 - Share a little about yourself too, so it feels like a real conversation, not an interview.
 - If the learner writes in English (or mixes in English), reply in German, and put the German way to say what THEY meant in correction.corrected (e.g. "I don't know how to say that" → "Ich weiß nicht, wie man das sagt."), with note "In German:".
 - Your German must be perfectly correct: check every verb matches its subject (ich mache, du machst, er macht…), and check articles and word order before you answer.
+- HOW DO I SAY: if the learner asks how to say something ("how do I say tired?", "Wie sagt man …?"), first give the German in reply_de with the English in brackets, invite them to try saying it, then carry on the conversation.
+- MIXED LANGUAGE: list every English word the learner used in their latest message in english_words.
+- WORDS FROM ELSEWHERE: if the learner says they have learned new words (e.g. on Duolingo) and names them, list them in learned_words (German dictionary form without article, English meaning), react warmly, and use one of them in your reply.
+- SPOKEN MESSAGES: if the learner's latest message is audio, write exactly what they said in learner_heard, word for word, every word in the language it was spoken in (keep English words in English; never translate, fix or tidy it). Then correct that transcript like a typed message. If you can't make it out, set learner_heard to "" and kindly ask them to say it again.
 - English help goes only in square brackets right after the German word it explains, e.g. Machst [machen = to do] du Sport? Only for words the learner probably doesn't know yet. Plain text only: no asterisks or other formatting.
 - The learner speaks through speech-to-text: ignore capitalisation and punctuation, and never correct those.
 
@@ -788,7 +873,7 @@ WORD TRACKING (use the exact spelling from the WORDS THE LEARNER KNOWS list; mat
 - learner_new: German words NOT in the list that the learner used correctly in their latest message (dictionary form, max 5, no names of people or places), with their English meaning.
 
 Reply with ONLY JSON, no markdown:
-{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning", "base": "dictionary form"}], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"], "learner_new": [{"w": "dictionary form", "en": "meaning"}]}`;
+{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning", "base": "dictionary form"}], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"], "learner_new": [{"w": "dictionary form", "en": "meaning"}], "english_words": [], "learned_words": [], "learner_heard": ""}`;
 }
 function parseJSON(text){
   if (!text) throw new Error("Empty answer");
@@ -832,11 +917,13 @@ async function callLLM(system, messages, signal, maxTokens = 1500){
   if (S.provider === "gemini") {
     const body = JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
-      contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: m.media ? [{ inlineData: { mimeType: m.media.mimeType, data: m.media.data } }, { text: m.content }] : [{ text: m.content }] })),
       generationConfig: { temperature: 0.8, responseMimeType: "application/json", maxOutputTokens: maxTokens }
     });
-    const chain = GEMINI_CHAIN;
-    const limit = maxTokens > 2000 ? 45000 : 10000;
+    // Voice: 3.1 Flash-Lite writes down exactly what was said (3.5 tends to "fix" English words into German).
+    const audio = messages.some(m => m.media && /^audio/.test(m.media.mimeType));
+    const chain = audio ? ["gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash"] : GEMINI_CHAIN;
+    const limit = maxTokens > 2000 ? 45000 : audio || messages.some(m => m.media) ? 20000 : 10000;
     let lastErr = "Google's free servers are busy right now. Try again in a minute.";
     for (const model of chain) {
       const to = withTimeout(signal, limit);
@@ -865,7 +952,7 @@ async function callLLM(system, messages, signal, maxTokens = 1500){
     const model = await pickModel();
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", signal, headers: claudeHeaders(),
-      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages })
+      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: messages.map(m => m.media && /^image/.test(m.media.mimeType) ? { role: m.role, content: [{ type: "image", source: { type: "base64", media_type: m.media.mimeType, data: m.media.data } }, { type: "text", text: m.content }] } : { role: m.role, content: m.content }) })
     });
     if (res.status === 404) { S.model = ""; persist("model"); }
     if (!res.ok) throw new Error(await friendlyHttpError(res));
@@ -890,11 +977,13 @@ function history(extra){
 let session = null, turns = [], busy = false, ctl = null, fixes = [], newWords = [];
 const msgs = $("msgs");
 function scrollDown(){ const s = $("chat"); s.scrollTop = s.scrollHeight; }
+let wordTapAt = 0;
 function afterSpeak(){
+  if (Date.now() - wordTapAt < 800) { if (current === "chat" && phase === "speaking") setPhase("paused"); return; }
   if (S.autoListen && current === "chat" && !busy) setTimeout(() => { if (!listening && current === "chat") startListening(); }, 250);
   else if (current === "chat") setPhase("paused");
 }
-function tutorBubble(d){
+function tutorBubble(d, quiet){
   const el = document.createElement("div"); el.className = "msg t";
   const nw = (d.new_words || []).filter(w => w && w.de);
   el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${glossHTML(d.reply_de, d.glossary)}</div><div class="en-text" hidden>${esc(d.reply_en)}</div>
@@ -907,14 +996,23 @@ function tutorBubble(d){
     if (a === "en") { const en = el.querySelector(".en-text"); en.hidden = !en.hidden; e.target.classList.toggle("on", !en.hidden); scrollDown(); }
   };
   msgs.appendChild(el); scrollDown();
+  if (quiet) return;
   if (S.autoSpeak || loop) { setPhase("speaking"); speak(d.reply_de, null, afterSpeak); } else afterSpeak();
+}
+// English words mixed into the learner's German are shown in a different colour.
+function markEnglish(text, words){
+  const set = new Set((Array.isArray(words) ? words : []).map(w => norm(w)).filter(Boolean));
+  if (!set.size) return esc(text);
+  return String(text ?? "").split(/(\p{L}[\p{L}'’-]*)/u).map((p, i) => i % 2 && set.has(norm(p)) ? `<span class="enw" title="English">${esc(p)}</span>` : esc(p)).join("");
 }
 function userBubble(text){ const el = document.createElement("div"); el.className = "msg u"; el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${esc(text)}</div></div>`; msgs.appendChild(el); scrollDown(); return el; }
 function markUser(el, c){
-  if (c && c.corrected) { const f = document.createElement("div"); f.className = "fix"; f.innerHTML = `<div class="k">Better</div><div class="c" lang="de">${esc(c.corrected)}</div>${c.note ? `<div class="n">${esc(c.note)}</div>` : ""}`; el.appendChild(f); }
+  if (c && c.corrected) { const inDe = /^in german/i.test(String(c.note || "")); const note = String(c.note || "").replace(/^in german:?\s*/i, "");
+    const f = document.createElement("div"); f.className = "fix"; f.innerHTML = `<div class="k">${inDe ? "In German" : "Better"}</div><div class="c" lang="de">${esc(c.corrected)}</div>${note ? `<div class="n">${esc(note)}</div>` : ""}`; el.appendChild(f); }
   else { const ok = document.createElement("div"); ok.className = "okmark"; ok.textContent = "✓ Gut"; el.appendChild(ok); }
 }
-async function ask(userEl, userText){
+const AUDIO_NOTE = "(The learner's spoken message is in the audio above. Write it word for word in learner_heard.)";
+async function ask(userEl, userText, media){
   if (!S.key) { show("home"); return; }
   busy = true; $("sendBtn").disabled = true; setStatus(""); setPhase("thinking");
   const tEl = document.createElement("div"); tEl.className = "msg t"; tEl.innerHTML = `<div class="bub typing" lang="de">Lena denkt nach…</div>`; msgs.appendChild(tEl); scrollDown();
@@ -924,21 +1022,31 @@ async function ask(userEl, userText){
     if (ctl !== myCtl) return;
     if (typeof d.reply_de !== "string") throw new Error("Couldn't read Lena's answer");
     tEl.remove();
+    if (userEl && media) {
+      userText = String(d.learner_heard || "").trim() || "(…)";
+      const last = turns[turns.length - 1]; if (last && last.role === "user") { last.content = userText; delete last.media; }
+      userEl.classList.remove("voice");
+    }
+    if (userEl) userEl.querySelector(".de-text").innerHTML = markEnglish(userText, d.english_words);
+    if (Array.isArray(d.learned_words) && d.learned_words.length) { const n = addLearned(d.learned_words); if (n) toast(`Added ${n} new word${n === 1 ? "" : "s"} to your list`); }
     if (userEl) { markUser(userEl, d.correction); if (d.correction && d.correction.corrected) fixes.push({ you: userText, better: d.correction.corrected, why: d.correction.note || "" }); }
     (d.new_words || []).forEach(w => w && w.de && newWords.push({ de: String(w.de), en: String(w.en || "") }));
     trackUsage(userEl ? d.learner_used : null, d.lena_used);
     if (userEl) learnFromLearner(d.learner_new);
     turns.push({ role: "assistant", content: d.reply_de });
+    if (userEl) chatLog.push({ u: userText, c: d.correction || null, en: Array.isArray(d.english_words) ? d.english_words : [] });
+    chatLog.push({ t: { reply_de: d.reply_de, reply_en: d.reply_en || "", glossary: Array.isArray(d.glossary) ? d.glossary : [], new_words: Array.isArray(d.new_words) ? d.new_words : [] } });
+    saveChat();
     busy = false; $("sendBtn").disabled = false;
     tutorBubble(d);
   } catch (e) {
     if (ctl !== myCtl) return;
     busy = false; $("sendBtn").disabled = false;
     if (e.name === "AbortError") { tEl.remove(); setPhase("paused"); return; }
-    retry = { userText, tEl };
+    retry = { userText, media, tEl };
     tEl.querySelector(".bub").innerHTML = `<span class="err">${esc(e.message || "Lena didn't answer. Try again.")}</span>`;
     setPhase("paused", "Tap to try again.");
-    if (userEl) { turns.pop(); userEl.remove(); if (S.adv) { $("input").value = userText; grow(); } }
+    if (userEl) { turns.pop(); userEl.remove(); if (S.adv && !media) { $("input").value = userText; grow(); } }
   }
 }
 // After a failed answer, the big button resends (or re-asks for Lena's opening) instead of opening the mic.
@@ -946,12 +1054,50 @@ let retry = null;
 function retryLast(){
   const r = retry; retry = null; if (!r) return false;
   r.tEl.remove();
-  if (r.userText) { const el = userBubble(r.userText); turns.push({ role: "user", content: r.userText }); ask(el, r.userText); }
+  if (r.media) { const el = voiceBubble(); turns.push({ role: "user", content: AUDIO_NOTE, media: r.media }); ask(el, null, r.media); }
+  else if (r.userText) { const el = userBubble(r.userText); turns.push({ role: "user", content: r.userText }); ask(el, r.userText); }
   else ask(null, null);
   return true;
 }
+function voiceBubble(){ const el = userBubble("🎙 …"); el.classList.add("voice"); return el; }
+function sendAudio(media){
+  if (busy || current !== "chat") return;
+  msgs.querySelectorAll(".hintbox").forEach(h => h.remove());
+  if (retry) { retry.tEl.remove(); retry = null; }
+  const el = voiceBubble(); turns.push({ role: "user", content: AUDIO_NOTE, media });
+  ask(el, null, media);
+}
+/* ---------- an open chat is kept until Finish, so you can come back to it ---------- */
+let chatLog = [];
+function saveChat(){ if (!session) return; S.chat = { session, turns: turns.slice(-60).map(t => ({ role: t.role, content: t.content })), fixes: fixes.slice(-40), newWords: newWords.slice(-60), log: chatLog.slice(-80), at: Date.now() }; persist("chat"); }
+function finalizeChat(){
+  const c = S.chat; S.chat = null; persist("chat");
+  if (!c) return { mine: 0, fixes: 0, words: 0 };
+  const mine = (c.turns || []).filter(t => t.role === "user").length;
+  if (mine > 0) { S.sessions += 1; persist("sessions"); }
+  const fx = c.fixes || [];
+  if (fx.length) { S.mistakes = [...fx.map(f => ({ ...f, at: today() })), ...S.mistakes].slice(0, 200); persist("mistakes"); }
+  const fresh = (c.newWords || []).map(w => ({ w: String(w.de || "").replace(/^(der|die|das) /i, "").trim(), en: w.en })).filter(w => w.w);
+  const n = addWords(fresh.map(w => w.w)); fresh.forEach(w => { if (w.en && !enOf(w.w)) S.en[w.w] = String(w.en); bump(w.w, "l"); });
+  if (fresh.length) { persist("en"); persist("stats"); }
+  return { mine, fixes: fx.length, words: n };
+}
+function openTalk(){ unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } if (S.chat && S.chat.session) resumeChat(); else startChat({ title: "Einfach reden", mode: "free", text: pickTopic() }); }
+function resumeChat(){
+  const c = S.chat; stopAll(); retry = null;
+  session = c.session; turns = (c.turns || []).slice(); fixes = (c.fixes || []).slice(); newWords = (c.newWords || []).slice(); chatLog = (c.log || []).slice();
+  msgs.innerHTML = ""; loop = !S.adv; $("handsBtn").classList.toggle("on", S.autoListen);
+  show("chat", S.adv ? session.title : "Lena");
+  chatLog.forEach(x => { if (x.t) tutorBubble(x.t, true); else { const el = userBubble(""); el.querySelector(".de-text").innerHTML = markEnglish(x.u, x.en); markUser(el, x.c); } });
+  if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
+  if (!chatLog.some(x => x.t)) { ask(null, null); return; }
+  setPhase("paused", "Welcome back! Tap the button when you're ready to carry on."); scrollDown();
+}
+let toastT = null;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3500); }
 function startChat(s){
-  stopAll(); retry = null; session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = ""; loop = !S.adv;
+  if (S.chat) finalizeChat();
+  stopAll(); retry = null; session = s; turns = []; fixes = []; newWords = []; chatLog = []; msgs.innerHTML = ""; loop = !S.adv;
   $("handsBtn").classList.toggle("on", S.autoListen);
   show("chat", S.adv ? s.title : "Lena");
   if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
@@ -970,7 +1116,7 @@ $("sendBtn").onclick = send;
 $("input").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 function grow(){ const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }
 $("input").oninput = grow;
-function stopAll(){ loop = false; try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
+function stopAll(){ loop = false; phoneWant = false; if (recording) stopRecording(false); try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
 
 $("hintBtn").onclick = async () => {
   if (busy || !turns.length) return;
@@ -987,23 +1133,9 @@ $("hintBtn").onclick = async () => {
 /* ---------- finish ---------- */
 $("endBtn").onclick = () => {
   stopAll();
-  const mine = turns.filter(t => t.role === "user").length;
-  if (mine > 0) { S.sessions += 1; persist("sessions"); }
-  if (fixes.length) { S.mistakes = [...fixes.map(f => ({ ...f, at: today() })), ...S.mistakes].slice(0, 200); persist("mistakes"); }
-  const known = new Set(allWords().map(w => w.toLowerCase())); const seen = new Set();
-  const fresh = newWords.filter(w => { const k = w.de.toLowerCase(); if (known.has(k) || seen.has(k)) return false; seen.add(k); return true; });
-  show("summary", "Gut gemacht!");
-  $("summary").innerHTML = `<h2>${esc(session.title)}</h2>
-    <p class="lead">${mine} message${mine === 1 ? "" : "s"} from you · ${fixes.length} correction${fixes.length === 1 ? "" : "s"}</p>
-    <p class="label">Corrections</p>
-    <div class="card">${fixes.length ? fixes.map(f => `<div class="mist"><div class="you" lang="de">${esc(f.you)}</div><div class="better" lang="de">${esc(f.better)}</div><div class="why">${esc(f.why)}</div></div>`).join("") : "No corrections this time. Sehr gut."}</div>
-    <p class="label">New words from Lena</p>
-    <div class="card">${fresh.length ? `<div class="wordwrap">${fresh.map((w,i) => `<label class="w"><input type="checkbox" data-i="${i}" checked> <span lang="de">${esc(w.de)}</span> <i style="font-family:var(--f-en);color:var(--muted)">${esc(w.en)}</i></label>`).join("")}</div><div class="links"><button class="send" id="keepBtn">Add ticked words to my list</button></div>` : "No new words this time."}</div>
-    <div class="links"><button class="send" id="againBtn">Talk again</button><button class="ghost" id="homeBtn2">Home</button></div>`;
-  $("againBtn").onclick = () => startChat(session.mode === "free" ? { ...session, text: pickTopic() } : session);
-  $("homeBtn2").onclick = () => show("home");
-  const kb = $("keepBtn");
-  if (kb) kb.onclick = () => { const picked = [...$("summary").querySelectorAll("input[type=checkbox]")].filter(c => c.checked).map(c => fresh[+c.dataset.i]); picked.forEach(w => { if (w.en) S.en[w.de] = w.en; }); persist("en"); const pick = picked.map(w => w.de); const n = addWords(pick); pick.forEach(w => bump(w, "l")); persist("stats"); kb.textContent = n ? `Added ${n} word${n === 1 ? "" : "s"}` : "Nothing to add"; kb.disabled = true; };
+  const r = finalizeChat(); session = null; turns = []; chatLog = []; fixes = []; newWords = [];
+  show("home");
+  toast(r.mine ? `Saved · ${r.mine} message${r.mine === 1 ? "" : "s"} · ${r.fixes} correction${r.fixes === 1 ? "" : "s"}${r.words ? ` · ${r.words} new word${r.words === 1 ? "" : "s"}` : ""}` : "Chat closed");
 };
 
 /* ---------- words ---------- */
@@ -1024,9 +1156,43 @@ function renderWords(){
   $("bankCount").textContent = `${BANK.length} words in Lena's word bank · ${allWords().filter(w => bankOf(w)).length} of them on your list`;
   $("mistList").innerHTML = S.mistakes.length ? S.mistakes.slice(0, 50).map(f => `<div class="mist"><div class="you" lang="de">${esc(f.you)}</div><div class="better" lang="de">${esc(f.better)}</div><div class="why">${esc(f.why)}</div></div>`).join("") : "No mistakes saved yet. They appear here after you tap Finish.";
 }
-$("addBtn").onclick = () => { const n = addWords($("addInput").value.split(",")); $("addInput").value = ""; renderWords(); $("addBtn").textContent = n ? `Added ${n}` : "Add"; setTimeout(() => $("addBtn").textContent = "Add", 1500); };
-$("addInput").onkeydown = e => { if (e.key === "Enter") $("addBtn").click(); };
-$("bankList").onclick = e => { const b = e.target.closest("[data-add]"); if (!b) return; addWords([b.dataset.add]); bump(b.dataset.add, "l"); persist("stats"); renderWords(); };
+// Words learned elsewhere start as "recognised"; Lena then brings them into chats.
+function addLearned(list){
+  const items = (Array.isArray(list) ? list : []).map(x => typeof x === "string" ? { w: x } : x)
+    .map(x => ({ w: String(x && x.w || "").trim().replace(/^(der|die|das) /i, ""), en: x && x.en ? String(x.en) : "" })).filter(x => x.w && x.w.length <= 40);
+  const n = addWords(items.map(x => x.w));
+  items.forEach(x => { if (x.en && !enOf(x.w)) S.en[x.w] = x.en; bump(x.w, "vo"); });
+  if (items.length) { persist("en"); persist("stats"); }
+  return n;
+}
+$("addBtn").onclick = () => {
+  const n = addLearned($("addInput").value.split(/[,;\n]+/)); $("addInput").value = ""; renderWords();
+  $("addBtn").textContent = n ? `Added ${n}` : "Already on your list"; setTimeout(() => $("addBtn").textContent = "Add words", 1800);
+  if (n && S.key) ensureMeanings().then(() => { if (current === "words") renderWords(); });
+};
+$("learnBtn").onclick = () => { renderWords(); show("words", "Words"); setTimeout(() => { $("learnBox").scrollIntoView({ block: "start", behavior: "smooth" }); }, 250); };
+$("shotBtn").onclick = () => { if (!S.key) { renderSettings(); show("settings", "Settings"); return; } $("shotFile").click(); };
+async function shrinkImage(file){
+  const url = URL.createObjectURL(file);
+  try { const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, 1400 / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); return { mimeType: "image/jpeg", data: c.toDataURL("image/jpeg", 0.85).split(",")[1] }; }
+  finally { URL.revokeObjectURL(url); }
+}
+$("shotFile").onchange = async () => {
+  const f = $("shotFile").files[0]; $("shotFile").value = ""; if (!f) return;
+  $("shotOut").innerHTML = `<p class="hint">Reading your screenshot…</p>`;
+  try {
+    const img = await shrinkImage(f);
+    const j = parseJSON(await callLLM('This is a screenshot from a language-learning app (like Duolingo) or a photo of notes. List every German word or short phrase the learner is learning in it. Reply ONLY JSON: {"words": [{"w": "German (nouns without der/die/das)", "en": "English meaning"}]}', [{ role: "user", content: "Here is the picture.", media: img }], null, 3000));
+    const ws = (Array.isArray(j) ? j : j.words || []).filter(x => x && x.w).slice(0, 80);
+    if (!ws.length) { $("shotOut").innerHTML = `<p class="hint">I couldn't find German words in that picture.</p>`; return; }
+    $("shotOut").innerHTML = `<div class="card"><p class="label" style="margin-top:0">Found ${ws.length} word${ws.length === 1 ? "" : "s"}</p><div class="wordwrap">${ws.map((x, i) => `<label class="w"><input type="checkbox" data-i="${i}" checked> <span lang="de">${esc(x.w)}</span> <i style="font-family:var(--f-en);color:var(--muted)">${esc(x.en || "")}</i></label>`).join("")}</div><div class="links"><button class="send" id="shotAdd">Add ticked words</button></div></div>`;
+    $("shotAdd").onclick = () => { const pick = [...$("shotOut").querySelectorAll("input[type=checkbox]")].filter(c => c.checked).map(c => ws[+c.dataset.i]); const n = addLearned(pick);
+      $("shotOut").innerHTML = `<p class="hint">Added ${n} new word${n === 1 ? "" : "s"}${pick.length - n ? ` (${pick.length - n} already on your list)` : ""}. Lena will start bringing them into your chats.</p>`; renderWords(); };
+  } catch (e) { $("shotOut").innerHTML = `<p class="err">${esc(e.message || "Couldn't read that picture.")}</p>`; }
+};
+$("bankList").onclick = e => { const b = e.target.closest("[data-add]"); if (!b) return; speak(b.dataset.add, Math.max(0.6, S.rate - 0.15)); addWords([b.dataset.add]); bump(b.dataset.add, "l"); persist("stats"); renderWords(); };
 
 /* ---------- settings ---------- */
 const KEY_HELP = {
@@ -1039,7 +1205,7 @@ function renderVoiceList(){
 function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
-  $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
+  $("hear").value = S.hear; $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
   renderVoiceList(); renderAccount(); applyTheme(S.theme);
 }
 $("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
@@ -1047,6 +1213,7 @@ $("apiKey").onchange = () => { S.key = $("apiKey").value.trim(); S.model = ""; p
 $("level").onchange = () => { S.level = $("level").value; persist("level"); };
 $("voice").onchange = () => { S.voice = $("voice").value; persist("voice"); };
 $("rate").oninput = () => { S.rate = +$("rate").value; $("rateOut").textContent = S.rate.toFixed(2) + "×"; persist("rate"); };
+$("hear").onchange = () => { S.hear = $("hear").value; persist("hear"); };
 $("autoSpeak").onchange = () => { S.autoSpeak = $("autoSpeak").checked; persist("autoSpeak"); };
 $("autoSend").onchange = () => { S.autoSend = $("autoSend").checked; persist("autoSend"); };
 $("themeSeg").onclick = e => { const b = e.target.closest("[data-theme]"); if (!b) return; S.theme = b.dataset.theme; persist("theme"); applyTheme(S.theme); };
@@ -1113,7 +1280,7 @@ const ago = t => { if (!t) return "never"; const d = Math.floor((Date.now() - t)
 $("wordList").addEventListener("click", e => {
   const b = e.target.closest("[data-w]"); if (!b) return; e.stopPropagation();
   const w = b.dataset.w, st = (S.stats || {})[w.toLowerCase()] || {}, t = warmth(w);
-  hidePop(); b.classList.add("sel");
+  hidePop(); b.classList.add("sel"); wordTapAt = Date.now(); speak(w, Math.max(0.6, S.rate - 0.15));
   placePop(b, `${withArt(w)} · ${HEAT[level(t)].label} ${t}° · importance ${importance(w)}`, `${enOf(w) || "meaning not saved yet"} — said ${st.c || 0}× right, ${st.x || 0}× wrong · drill ${st.vo || 0}/${(st.vo || 0) + (st.vm || 0)} · looked up ${st.k || 0}× · last ${ago(st.t)}`);
 });
 
@@ -1422,6 +1589,7 @@ document.addEventListener("click", async e => {
   if (!el) { hidePop(); return; }
   hidePop(); el.classList.add("sel");
   const word = el.textContent, key = norm(word);
+  if (!recording && !listening) { wordTapAt = Date.now(); speak(word, Math.max(0.6, S.rate - 0.15)); }
   if (el.closest(".t, .nitem")) { const entry = entryFor(String(el.dataset.base || "").replace(/^(der|die|das) /i, "")) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
   let en = el.dataset.en || glossCache[key];
   if (en) { placePop(el, word, en); return; }
@@ -1462,14 +1630,16 @@ async function onUser(u){
   const ref = fbDb.collection("users").doc(u.uid);
   try {
     const snap = await ref.get();
-    if (snap.exists) {
-      const d = snap.data();
-      SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } });
-    }
+    const localUid = store.get("uid", null), localAt = store.get("updatedAt", 0);
+    if (localUid !== u.uid) { if (localUid) resetLocal(); store.set("uid", u.uid); }
+    const d = snap.exists ? snap.data() : null;
+    // The account copy wins unless this phone has newer changes that never reached it.
+    const takeServer = !!d && (localUid !== u.uid || (d.updatedAt || 0) >= localAt);
+    if (takeServer) { SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } }); store.set("updatedAt", d.updatedAt || Date.now()); }
     userRef = ref;
-    applyTheme(S.theme);
+    migratePrefs(); applyTheme(S.theme);
     seedWords();
-    if (!snap.exists || (!snap.data().key && S.key)) syncNow();
+    if (!d || !takeServer || (!d.key && S.key)) syncNow();
     show("home");
   } catch (e) {
     if (e && e.code === "permission-denied") gate(`${u.email} isn't on Lena's invite list yet. Ask Saurya to invite this address.`, { other: true });
@@ -1491,7 +1661,8 @@ $("signOutBtn").onclick = signOut;
 function renderAccount(){
   const signed = !!(fbAuth && me);
   $("acctBox").hidden = !signed;
-  $("acctName").textContent = signed ? "Signed in as " + me.email : "";
+  const ls = store.get("lastSync", 0);
+  $("acctName").textContent = signed ? `Signed in as ${me.email} · progress saved to your account ${ls ? new Date(ls).toLocaleString() : "(not yet)"}` : "";
   $("setLead").textContent = signed ? "Your words, mistakes, streak and key are saved to your account." : "Everything here stays on this phone.";
   $("inviteBox").hidden = !isAdmin();
   if (isAdmin()) loadInvites();
