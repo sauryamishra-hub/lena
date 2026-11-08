@@ -221,6 +221,11 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .invite-list{display:flex;flex-direction:column}
 .invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--soft-line);overflow-wrap:anywhere}
 .toggle{display:none}
+.banklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.bw{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:var(--bw) solid var(--line);background:var(--surface);padding:7px 10px;color:var(--ink)}
+.bw span{font-weight:600;font-size:15px}
+.bw i{font-family:var(--f-en);color:var(--muted);font-size:13px}
+.bw:active{background:var(--gold-soft)}
 @media (max-width:420px){.bar .ver{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -316,6 +321,10 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <p class="label">Add words (comma-separated)</p>
     <div class="addrow"><input type="text" id="addInput" placeholder="Apfel, morgen, ich möchte" lang="de"><button class="send" id="addBtn">Add</button></div>
     <div id="wordList"></div>
+    <h2 style="margin-top:32px">Useful next words</h2>
+    <p class="lead">The most common everyday words you haven't picked up yet. Lena brings these into chats when they fit. Tap one to add it now.</p>
+    <div class="banklist" id="bankList"></div>
+    <p class="hint" id="bankCount"></p>
     <h2 style="margin-top:32px">Mistakes to review</h2>
     <p class="lead">From past chats, newest first.</p>
     <div class="card" id="mistList"></div>
@@ -394,6 +403,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 </div>
 <div class="pop" id="pop" hidden></div>
 
+<script src="vocab.js"></script>
 <script>
 (() => {
 // Everyone starts from a small core; the word list then grows from what each person actually says.
@@ -431,7 +441,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.6.0";
+const VERSION = "1.7.0";
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -465,6 +475,41 @@ let userRef = null, syncTimer = null;
 const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
 function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
 const allWords = () => [...new Set([...BASE_WORDS, ...S.added])];
+
+/* ---------- word bank: the most useful German words, ranked by how common they are ---------- */
+const ART = { r: "der", e: "die", s: "das" };
+const BANK = []; const BANKMAP = new Map();
+String(window.LENA_VOCAB || "").split("\n").forEach(line => {
+  const [w, en, a, l, t] = line.split("|"); if (!w || BANKMAP.has(w.toLowerCase())) return;
+  const e = { w, en, art: ART[a] || "", lvl: +l || 2, tag: t || "", rank: BANK.length + 1 };
+  BANK.push(e); BANKMAP.set(w.toLowerCase(), e);
+});
+const bankOf = w => BANKMAP.get(String(w || "").toLowerCase());
+const withArt = w => { const b = bankOf(w); return b && b.art ? b.art + " " + w : w; };
+const LEVEL_NUM = { "A1": 1, "A1+": 1.5, "A2": 2 };
+// Importance 0-100: how common the word is in everyday German, plus a boost for words that keep coming up in your own chats.
+function importance(w){
+  const b = bankOf(w), N = BANK.length || 1;
+  const base = b ? Math.round(100 * (1 - Math.log(b.rank) / Math.log(N + 1)) * 0.85 + 15) : 35;
+  const st = (S.stats || {})[String(w).toLowerCase()] || {};
+  const uses = (st.s || 0) + (st.l || 0);
+  return Math.min(100, base + Math.round(Math.min(25, 8 * Math.log2(1 + uses))));
+}
+// Where a word stands for this learner: new, met (heard from Lena), recognised (drilled or looked up), or in use (said correctly).
+function stage(w){
+  const st = (S.stats || {})[String(w).toLowerCase()];
+  if (!st) return "new";
+  if (st.c > 0) return "use";
+  if (st.vo > 0) return "recognised";
+  return st.l > 0 || st.k > 0 ? "met" : "new";
+}
+// The most useful words this learner hasn't picked up yet, at or just above their level.
+function nextNewWords(n = 6){
+  const known = new Set(allWords().map(w => w.toLowerCase()));
+  const max = (LEVEL_NUM[S.level] || 1) + 1;
+  return BANK.filter(b => !known.has(b.w.toLowerCase()) && b.lvl <= max && b.tag !== "g")
+    .map(b => [b, importance(b.w) + Math.random() * 10]).sort((a, c) => c[1] - a[1]).slice(0, n).map(x => x[0]);
+}
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
 /* ---------- views ---------- */
@@ -598,12 +643,14 @@ LEVEL: ${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}
 
 WORDS THE LEARNER KNOWS: ${allWords().join(", ")}
 
-FOCUS WORDS (the learner's least-practised words): ${focusWords().join(", ")}
-- Weave one or two focus words naturally into each reply, and ask questions that invite the learner to use them.
+WORTH REVIEWING (useful words the learner knows but hasn't used lately): ${focusWords().join(", ")}
+GOOD NEXT NEW WORDS (very common words the learner hasn't learned yet): ${nextNewWords().map(b => (b.art ? b.art + " " : "") + b.w + " = " + b.en).join("; ")}
+- Use at most ONE word from these lists per reply, and only if it fits what you are already talking about. Never change the subject or bend a sentence just to fit a word in. The conversation must stay natural.
+- When you bring in a new word, prefer one from GOOD NEXT NEW WORDS and make its meaning clear from context.
 
 HOW TO REPLY
 - Natural, friendly spoken German. Build mainly from the known words; if the list is short, keep sentences very simple and bring in useful everyday words gradually.
-- Introduce at most 2 new words per reply and list them in new_words.
+- Introduce at most 2 new words per reply and list them in new_words (nouns with der/die/das).
 - Usually end with one easy question so the learner has something to answer.
 - Share a little about yourself too, so it feels like a real conversation, not an interview.
 - If the learner uses English (or mixes), reply in German and give them the German version in correction.
@@ -831,11 +878,15 @@ function renderWords(){
   const groups = { hot: [], warm: [], cool: [], cold: [] };
   allWords().map(w => [w, warmth(w)]).sort((a, b) => b[1] - a[1]).forEach(([w, t]) => groups[level(t)].push(w));
   $("wordList").innerHTML = Object.entries(groups).filter(([, ws]) => ws.length).map(([lv, ws]) =>
-    `<p class="grp">${HEAT[lv].label} · ${ws.length}</p><div class="wordwrap">${ws.map(w => `<button class="w ${lv}" data-w="${esc(w)}" lang="de">${esc(w)}</button>`).join("")}</div>`).join("");
+    `<p class="grp">${HEAT[lv].label} · ${ws.length}</p><div class="wordwrap">${ws.map(w => `<button class="w ${lv}" data-w="${esc(w)}" lang="de">${esc(withArt(w))}</button>`).join("")}</div>`).join("");
+  const next = nextNewWords(24).sort((a, b) => a.rank - b.rank);
+  $("bankList").innerHTML = next.map(b => `<button class="bw" data-add="${esc(b.w)}"><span lang="de">${esc((b.art ? b.art + " " : "") + b.w)}</span><i>${esc(b.en)}</i></button>`).join("");
+  $("bankCount").textContent = `${BANK.length} words in Lena's word bank · ${allWords().filter(w => bankOf(w)).length} of them on your list`;
   $("mistList").innerHTML = S.mistakes.length ? S.mistakes.slice(0, 50).map(f => `<div class="mist"><div class="you" lang="de">${esc(f.you)}</div><div class="better" lang="de">${esc(f.better)}</div><div class="why">${esc(f.why)}</div></div>`).join("") : "No mistakes saved yet. They appear here after you tap Finish.";
 }
 $("addBtn").onclick = () => { const n = addWords($("addInput").value.split(",")); $("addInput").value = ""; renderWords(); $("addBtn").textContent = n ? `Added ${n}` : "Add"; setTimeout(() => $("addBtn").textContent = "Add", 1500); };
 $("addInput").onkeydown = e => { if (e.key === "Enter") $("addBtn").click(); };
+$("bankList").onclick = e => { const b = e.target.closest("[data-add]"); if (!b) return; addWords([b.dataset.add]); bump(b.dataset.add, "l"); persist("stats"); renderWords(); };
 
 /* ---------- settings ---------- */
 const KEY_HELP = {
@@ -872,7 +923,8 @@ $("testBtn").onclick = async () => {
 function learnFromLearner(list){
   if (!Array.isArray(list) || !list.length) return;
   const known = new Set(allWords().map(w => w.toLowerCase())); const add = [];
-  list.slice(0, 5).forEach(x => { const w = String(x && x.w || "").trim(); if (!w || w.length > 40 || known.has(w.toLowerCase())) return; known.add(w.toLowerCase()); add.push(w); if (x.en) S.en[w] = String(x.en); });
+  list.slice(0, 5).forEach(x => { let w = String(x && x.w || "").trim().replace(/^(der|die|das) /i, ""); const b = bankOf(w); if (b) w = b.w;
+    if (!w || w.length > 40 || known.has(w.toLowerCase())) return; known.add(w.toLowerCase()); add.push(w); if (x.en && !b) S.en[w] = String(x.en); });
   if (!add.length) return;
   S.added = [...S.added, ...add]; add.forEach(w => { bump(w, "s"); bump(w, "c"); });
   persist("added"); persist("en"); persist("stats");
@@ -906,7 +958,7 @@ function renderHeat(barId, legendId){
   $(legendId).innerHTML = order.map(k => `<span style="--c:${HEAT[k].c}">${HEAT[k].label} ${h[k]}</span>`).join("");
 }
 function focusWords(n = 8){
-  const scored = allWords().map(w => [w, warmth(w) + Math.random() * 12]).sort((a, b) => a[1] - b[1]);
+  const scored = allWords().filter(w => (bankOf(w) || {}).tag !== "g").map(w => [w, importance(w) * (1 - warmth(w) / 100) + Math.random() * 15]).sort((a, b) => b[1] - a[1]);
   return scored.slice(0, n).map(x => x[0]);
 }
 function trackUsage(learner, lena){
@@ -920,11 +972,11 @@ $("wordList").addEventListener("click", e => {
   const b = e.target.closest("[data-w]"); if (!b) return; e.stopPropagation();
   const w = b.dataset.w, st = (S.stats || {})[w.toLowerCase()] || {}, t = warmth(w);
   hidePop(); b.classList.add("sel");
-  placePop(b, `${w} · ${HEAT[level(t)].label} ${t}°`, `${enOf(w) || "meaning not saved yet"} — said ${st.c || 0}× right, ${st.x || 0}× wrong · drill ${st.vo || 0}/${(st.vo || 0) + (st.vm || 0)} · looked up ${st.k || 0}× · last ${ago(st.t)}`);
+  placePop(b, `${withArt(w)} · ${HEAT[level(t)].label} ${t}° · importance ${importance(w)}`, `${enOf(w) || "meaning not saved yet"} — said ${st.c || 0}× right, ${st.x || 0}× wrong · drill ${st.vo || 0}/${(st.vo || 0) + (st.vm || 0)} · looked up ${st.k || 0}× · last ${ago(st.t)}`);
 });
 
 /* ---------- Vokabeln: quick drill ---------- */
-function enOf(w){ return (S.en && S.en[w]) || EN[w] || ""; }
+function enOf(w){ return (S.en && S.en[w]) || EN[w] || (bankOf(w) || {}).en || ""; }
 const fold = x => String(x || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
   .replace(/[^a-z\s-]/g, " ").replace(/\s+/g, " ").trim().replace(/^(der|die|das|den|ein|eine) (?=\S)/, "");
 function lev(a, b){ const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i]); for (let j = 1; j <= n; j++) d[0][j] = j;
