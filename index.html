@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<title>Lena – Deutsch sprechen</title>
+<meta name="theme-color" content="#1D4FB0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap">
+<style>
+:root{
+  --bg:#F5F6F8; --surface:#FFFFFF; --ink:#141820; --muted:#5E6675; --line:#DDE1E8;
+  --accent:#1D4FB0; --accent-ink:#FFFFFF; --accent-soft:#E6EDFA;
+  --fix:#9A5B00; --fix-soft:#FFF3DF; --ok:#1F7A4A; --live:#C0352B;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-en:"Newsreader",Georgia,"Times New Roman",serif;
+  --r:14px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E1117; --surface:#171B23; --ink:#E9ECF2; --muted:#98A1B2; --line:#2A303C;
+  --accent:#7EA4F2; --accent-ink:#0B1530; --accent-soft:#1A2640;
+  --fix:#F0B65A; --fix-soft:#2D2412; --ok:#6BCB95; --live:#FF7B6E; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto;padding-top:env(safe-area-inset-top,0px)}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.bar{display:flex;align-items:center;gap:10px;padding-block:12px;border-bottom:1px solid var(--line)}
+.bar h1{font-size:20px;font-weight:800;font-stretch:112%;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logo{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:6px;background:var(--accent);color:var(--accent-ink);font-weight:800;flex:none}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600}
+.ghost.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.scroll{flex:1;overflow-y:auto;min-height:0;padding-block:16px 24px}
+
+.notice{background:var(--fix-soft);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;font-size:15px}
+.hero{width:100%;text-align:left;border:0;border-radius:20px;background:var(--accent);color:var(--accent-ink);padding:22px 20px;display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.hero .big{font-size:30px;font-weight:800;font-stretch:118%;line-height:1.05}
+.hero .small{font-family:var(--f-en);font-style:italic;font-size:17px;opacity:.85}
+.topicrow{display:flex;gap:8px;margin-bottom:22px}
+.topicrow input{flex:1;min-width:0}
+input[type=text],input[type=password],select,textarea{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+.stat{flex:1 1 90px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.stat b{display:block;font-size:24px;font-weight:800;font-stretch:115%;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.scene{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.scene .de{font-weight:750;font-size:16px}
+.scene .en{font-family:var(--f-en);font-style:italic;color:var(--muted);font-size:15px}
+.links{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+
+.msgs{display:flex;flex-direction:column;gap:14px}
+.msg{max-width:88%;min-width:0}
+.msg.t{align-self:flex-start}
+.msg.u{align-self:flex-end}
+.bub{border-radius:18px;padding:12px 14px}
+.t .bub{background:var(--surface);border:1px solid var(--line);border-top-left-radius:6px}
+.u .bub{background:var(--accent);color:var(--accent-ink);border-top-right-radius:6px}
+.de-text{font-size:19px;line-height:1.4;font-weight:500;overflow-wrap:anywhere}
+.u .de-text{font-size:17px}
+.en-text{font-family:var(--f-en);font-style:italic;font-size:16px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--line);padding-top:6px}
+.tools{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;color:var(--muted)}
+.chip.on{color:var(--accent);border-color:var(--accent)}
+.new{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.new span{font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:3px 8px;font-weight:600}
+.new span i{font-family:var(--f-en);font-weight:400;color:var(--muted)}
+.fix{margin-top:6px;background:var(--fix-soft);border-left:3px solid var(--fix);border-radius:8px;padding:8px 10px;font-size:15px}
+.fix .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--fix)}
+.fix .c{font-weight:650;font-size:16px}
+.fix .n{font-family:var(--f-en);font-style:italic;color:var(--muted)}
+.okmark{margin-top:4px;font-size:13px;color:var(--ok);font-weight:700;text-align:right}
+.typing{color:var(--muted);font-size:15px}
+.err{color:var(--fix);font-size:14px}
+.hintbox{align-self:stretch;border:1px dashed var(--accent);border-radius:var(--r);padding:10px 12px;background:var(--accent-soft)}
+.hintbox .de-text{font-size:17px}
+
+.composer{border-top:1px solid var(--line);background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px))}
+.row{display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;min-width:0;resize:none;border-radius:14px;padding:11px 12px;font-size:17px;max-height:120px}
+.send{background:var(--accent);color:var(--accent-ink);border:0;border-radius:14px;padding:12px 16px;font-weight:750}
+.send:disabled{opacity:.5}
+.mic{border:0;background:var(--accent);color:var(--accent-ink);border-radius:50%;width:56px;height:56px;display:grid;place-items:center;flex:none}
+.mic.live{background:var(--live);color:#fff;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.08)}}
+.sub{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.status{font-size:13px;color:var(--muted);margin-left:auto}
+
+.wordwrap{display:flex;flex-wrap:wrap;gap:6px}
+.w{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:15px}
+.w.added{border-color:var(--accent);color:var(--accent)}
+.addrow{display:flex;gap:8px;margin:12px 0 24px}
+.addrow input{flex:1;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.mist{padding:10px 0;border-top:1px solid var(--line)}
+.mist:first-child{border-top:0}
+.mist .you{text-decoration:line-through;color:var(--muted)}
+.mist .better{font-weight:650}
+.mist .why{font-family:var(--f-en);font-style:italic;color:var(--muted)}
+h2{font-size:22px;font-weight:800;font-stretch:110%;margin:0 0 6px}
+p.lead{color:var(--muted);margin:0 0 16px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-weight:700;font-size:14px}
+.field small{color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-weight:600}
+.toggle input{width:22px;height:22px;accent-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar pad">
+    <span class="logo" aria-hidden="true">L</span>
+    <h1 id="title">Lena</h1>
+    <button class="ghost" id="backBtn" hidden>Home</button>
+    <button class="ghost" id="endBtn" hidden>Finish</button>
+    <button class="ghost" id="setBtn">Settings</button>
+  </header>
+
+  <main class="scroll pad" id="home">
+    <div class="notice" id="needKey" hidden>Lena needs a key before she can talk. Open <b>Settings</b> and paste your Gemini (free) or Claude key.</div>
+    <button class="hero" id="talkBtn"><span class="big" lang="de">Einfach reden</span><span class="small">Free chat. Lena picks an everyday topic.</span></button>
+    <div class="topicrow">
+      <input type="text" id="topicInput" placeholder="…or name a topic: cricket, Diwali, my work" autocomplete="off">
+      <button class="send" id="topicBtn">Talk</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sStreak">0</b><span>Day streak</span></div>
+      <div class="stat"><b id="sWords">0</b><span>Words</span></div>
+      <div class="stat"><b id="sSessions">0</b><span>Chats</span></div>
+    </div>
+    <p class="label">Practise a situation</p>
+    <div class="grid" id="scenes"></div>
+    <div class="links"><button class="ghost" id="wordsBtn">My words &amp; mistakes</button></div>
+  </main>
+
+  <main class="scroll pad" id="chat" hidden><div class="msgs" id="msgs"></div></main>
+  <footer class="composer pad" id="composer" hidden>
+    <div class="row">
+      <button class="mic" id="micBtn" aria-label="Tap and speak German">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <textarea id="input" rows="1" placeholder="Tap the mic, or type…" lang="de" autocomplete="off"></textarea>
+      <button class="send" id="sendBtn">Senden</button>
+    </div>
+    <div class="sub">
+      <button class="chip" id="hintBtn">Help me answer</button>
+      <button class="chip" id="handsBtn">Hands-free</button>
+      <span class="status" id="status"></span>
+    </div>
+  </footer>
+
+  <main class="scroll pad" id="words" hidden>
+    <h2>My words</h2>
+    <p class="lead">Lena builds conversations from these. Add new Duolingo words, separated by commas.</p>
+    <div class="addrow"><input type="text" id="addInput" placeholder="Apfel, morgen, ich möchte" lang="de"><button class="send" id="addBtn">Add</button></div>
+    <div class="wordwrap" id="wordList"></div>
+    <h2 style="margin-top:28px">Mistakes to review</h2>
+    <p class="lead">From past chats, newest first.</p>
+    <div class="card" id="mistList"></div>
+  </main>
+
+  <main class="scroll pad" id="summary" hidden></main>
+
+  <main class="scroll pad" id="settings" hidden>
+    <h2>Settings</h2>
+    <p class="lead">Everything here stays on this phone.</p>
+    <div class="field">
+      <label for="provider">Tutor brain</label>
+      <select id="provider">
+        <option value="gemini">Google Gemini (free tier)</option>
+        <option value="claude">Claude API (pay per use)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="apiKey">API key</label>
+      <input type="password" id="apiKey" autocomplete="off" placeholder="Paste your key">
+      <small id="keyHelp"></small>
+    </div>
+    <div class="links" style="margin:0 0 24px"><button class="send" id="testBtn">Save &amp; test</button><span id="testOut" class="status" style="margin:0;align-self:center"></span></div>
+    <div class="field">
+      <label for="level">My level</label>
+      <select id="level">
+        <option value="A1">Beginner (A1): very short, simple sentences</option>
+        <option value="A1+">Beginner+ (A1+): a bit longer</option>
+        <option value="A2">Elementary (A2): everyday sentences, past tense</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="voice">German voice</label>
+      <select id="voice"></select>
+      <small>No German voice listed? Phone Settings → Text-to-speech → Google → Install voice data → Deutsch.</small>
+    </div>
+    <div class="field">
+      <label for="rate">Speaking speed: <span id="rateOut"></span></label>
+      <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
+    </div>
+    <label class="toggle"><input type="checkbox" id="autoSpeak"> Read Lena's replies aloud</label>
+    <label class="toggle"><input type="checkbox" id="autoSend"> Send automatically when I stop speaking</label>
+    <div class="links"><button class="ghost" id="voiceTest">Test voice</button></div>
+  </main>
+</div>
+
+<script>
+(() => {
+const BASE_WORDS = ["Tee","Café","bitte","oder","hallo","Zucker","Milch","mit","danke","Wasser","Kekse","und","tschüss","ich bin","ich komme aus","Tokio","Paris","Toronto","London","Berlin","und du","freut mich","mein","dein","Mama","Papa","Schwester","Bruder","Tochter","das ist","ist","lustig","nett","gut","schön","guck mal","hungrig","durstig","satt","müde","billig","lecker","das Restaurant","die","das","Wurst","Pizza","Fleisch","Salat","Käse","Schnitzel","Brot","Kaffee","Cola","trinken","alt","groß","klein","Stadt","Hotel","wo ist","hier","Park","Bahnhof","links","rechts","da drüben","Bäckerei","U-Bahn","Bibliothek","Toilette","Zoo","Taxi","Imbiss","geöffnet","Mann","Frau","Lehrer","Lehrerin","Bäcker","Bäckerin","Verkäufer","Verkäuferin","Musiker","ich","du","sie","ihr","wir","sind","bist","ja","nein","dir","mir","sportlich","schwimmen","joggen","wandern","spielen","Fußball","Tennis","Sport","Yoga","Musik","Party","cool","oft","nie","sehr","laut","draußen","brauchen","gehen","nach Hause","Handy","Entschuldigung","wirklich"];
+
+const TOPICS = ["what you drank this morning (tea or coffee)","the weather today","your family","your weekend","food you like","sports you play or watch","music","your city","a café you like","travel and cities you know (Paris, London, Tokio, Berlin)","being tired, hungry or thirsty","your phone","going for a walk or hike","a restaurant visit","your work day","friends","a party","the park and the zoo","going home by taxi or U-Bahn","bread and the bakery","cricket and football","festivals like Diwali","your favourite place","yoga and staying fit","something funny that happened","what is open or closed today","a teacher you remember","the library and books","cheap vs. expensive things","noise in the city"];
+
+const SCENES = [
+  {de:"Im Café", en:"At the café", brief:"You are a waiter in a Berlin café taking the learner's order."},
+  {de:"In der Bäckerei", en:"At the bakery", brief:"You are a baker; the learner buys bread and snacks."},
+  {de:"Nach dem Weg fragen", en:"Asking the way", brief:"The learner is a tourist asking you, a local, for directions (Bahnhof, U-Bahn, Park, Toilette)."},
+  {de:"Im Restaurant", en:"At the restaurant", brief:"You are a server; talk about food, hunger and whether it tastes good."},
+  {de:"Sich vorstellen", en:"Introducing yourself", brief:"You meet the learner at a party: names, where from, family."},
+  {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dayKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const today = () => dayKey(new Date());
+
+/* ---------- storage (this phone) ---------- */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("lena:"+k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem("lena:"+k, JSON.stringify(v)); } catch {} }
+};
+const S = {
+  provider: store.get("provider","gemini"), key: store.get("key",""), level: store.get("level","A1"),
+  voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
+  hands: store.get("hands",false), model: store.get("model",""),
+  added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[])
+};
+const persist = k => store.set(k, S[k]);
+const allWords = () => [...new Set([...BASE_WORDS, ...S.added])];
+function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
+
+/* ---------- views ---------- */
+const VIEWS = ["home","chat","words","summary","settings"];
+let current = "home";
+function show(v, title){
+  current = v;
+  VIEWS.forEach(x => $(x).hidden = x !== v);
+  $("composer").hidden = v !== "chat";
+  $("backBtn").hidden = v === "home";
+  $("endBtn").hidden = v !== "chat";
+  $("setBtn").hidden = v === "settings" || v === "chat";
+  $("title").textContent = title || "Lena";
+  if (v === "home") renderHome();
+}
+function renderHome(){
+  $("needKey").hidden = !!S.key;
+  $("sStreak").textContent = streak(); $("sWords").textContent = allWords().length; $("sSessions").textContent = S.sessions;
+}
+$("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
+$("scenes").onclick = e => { const b = e.target.closest(".scene"); if (b) { const s = SCENES[+b.dataset.i]; startChat({ title: s.de, mode: "scene", text: s.brief }); } };
+$("talkBtn").onclick = () => startChat({ title: "Einfach reden", mode: "free", text: pickTopic() });
+$("topicBtn").onclick = () => { const t = $("topicInput").value.trim(); if (!t) { $("topicInput").focus(); return; } $("topicInput").value = ""; startChat({ title: "Einfach reden", mode: "free", text: t }); };
+$("topicInput").onkeydown = e => { if (e.key === "Enter") $("topicBtn").click(); };
+$("backBtn").onclick = () => { stopAll(); show("home"); };
+$("wordsBtn").onclick = () => { renderWords(); show("words", "Words"); };
+$("setBtn").onclick = () => { renderSettings(); show("settings", "Settings"); };
+function pickTopic(){
+  const pool = TOPICS.filter(t => !S.recentTopics.includes(t));
+  const t = (pool.length ? pool : TOPICS)[Math.floor(Math.random() * (pool.length || TOPICS.length))];
+  S.recentTopics = [t, ...S.recentTopics].slice(0, 10); persist("recentTopics"); return t;
+}
+
+/* ---------- voice out ---------- */
+let voices = [];
+function loadVoices(){ try { voices = speechSynthesis.getVoices().filter(v => /^de/i.test(v.lang)); } catch { voices = []; } if (current === "settings") renderVoiceList(); }
+if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+function germanVoice(){ return voices.find(v => v.voiceURI === S.voice) || voices.find(v => /de[-_]DE/i.test(v.lang)) || voices[0]; }
+let unlocked = false;
+function unlockAudio(){ if (unlocked || !("speechSynthesis" in window)) return; unlocked = true; try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch {} }
+document.addEventListener("pointerdown", unlockAudio, { once: true });
+function speak(text, rate, onEnd){
+  if (!("speechSynthesis" in window) || !text) { onEnd && onEnd(); return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "de-DE"; u.rate = rate || S.rate;
+    const v = germanVoice(); if (v) u.voice = v;
+    let done = false; const fin = () => { if (!done) { done = true; onEnd && onEnd(); } };
+    u.onend = fin; u.onerror = fin;
+    speechSynthesis.speak(u);
+  } catch { onEnd && onEnd(); }
+}
+
+/* ---------- voice in ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false, heard = "";
+function setStatus(t){ $("status").textContent = t || ""; }
+function startListening(){
+  if (!SR) { setStatus("Speech input needs Chrome."); return; }
+  if (listening || busy) return;
+  try { speechSynthesis.cancel(); } catch {}
+  heard = "";
+  rec = new SR(); rec.lang = "de-DE"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  const before = $("input").value.trim();
+  rec.onresult = e => { let t = ""; for (const r of e.results) t += r[0].transcript; heard = t; $("input").value = (before ? before + " " : "") + t; grow(); };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") setStatus("Allow the microphone for this site in Chrome.");
+    else if (e.error === "no-speech") setStatus("I didn't hear anything. Tap the mic and try again.");
+    else if (e.error !== "aborted") setStatus("Mic error: " + e.error);
+  };
+  rec.onend = () => {
+    listening = false; $("micBtn").classList.remove("live");
+    if (status_isListening()) setStatus("");
+    if (heard.trim() && (S.autoSend || S.hands)) send();
+  };
+  try { rec.start(); listening = true; $("micBtn").classList.add("live"); setStatus("Listening… sprich jetzt"); } catch { setStatus("Couldn't start the mic. Tap again."); }
+}
+function status_isListening(){ return $("status").textContent.startsWith("Listening"); }
+$("micBtn").onclick = () => { if (listening) { try { rec.stop(); } catch {} } else startListening(); };
+$("handsBtn").onclick = () => { S.hands = !S.hands; persist("hands"); $("handsBtn").classList.toggle("on", S.hands); if (S.hands && !listening && !busy) startListening(); };
+
+/* ---------- the tutor brain ---------- */
+const LEVEL_TEXT = {
+  "A1": "CEFR A1: 1–2 very short sentences, present tense, simplest word order.",
+  "A1+": "CEFR A1+: 2 short sentences, present tense, may add one simple connector (und, aber, oder).",
+  "A2": "CEFR A2: 2–3 everyday sentences; present and simple past (Perfekt) are fine."
+};
+function systemPrompt(){
+  const ctx = session.mode === "free"
+    ? `FREE CHAT. Start by bringing up this topic naturally: ${session.text}. Let the chat drift wherever the learner takes it, like two friends talking. If it stalls, move to a new everyday topic.`
+    : `ROLE-PLAY: ${session.text}`;
+  return `You are Lena, a warm, curious German friend helping an adult beginner from India (Bengaluru) build speaking fluency. The learner is also learning on Duolingo.
+
+${ctx}
+
+LEVEL: ${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}
+
+WORDS THE LEARNER KNOWS: ${allWords().join(", ")}
+
+HOW TO REPLY
+- Natural, friendly spoken German. Build mainly from the known words.
+- Introduce at most 2 new words per reply and list them in new_words.
+- Usually end with one easy question so the learner has something to answer.
+- Share a little about yourself too, so it feels like a real conversation, not an interview.
+- If the learner uses English (or mixes), reply in German and give them the German version in correction.
+- The learner speaks through speech-to-text: ignore capitalisation and punctuation, and never correct those.
+
+CHECK THE LEARNER'S LATEST MESSAGE
+- Real error (wrong word, grammar, word order, article, verb ending) → correction = {"corrected": fixed sentence, "note": very short English explanation}.
+- Fine → correction = null. Be encouraging, never lecture.
+
+Reply with ONLY JSON, no markdown:
+{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}]}`;
+}
+function parseJSON(text){
+  if (!text) throw new Error("Empty answer");
+  let t = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  try { return JSON.parse(t); } catch {}
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+  throw new Error("Couldn't read Lena's answer");
+}
+async function friendlyHttpError(res){
+  let detail = ""; try { const j = await res.json(); detail = j?.error?.message || ""; } catch {}
+  if (res.status === 400 && /api key/i.test(detail)) return "That API key isn't valid. Check it in Settings.";
+  if (res.status === 401 || res.status === 403) return "The API key was refused. Check it in Settings.";
+  if (res.status === 429) return "Free limit reached for now. Wait a minute and try again.";
+  if (res.status >= 500) return "The AI service is busy. Try again in a moment.";
+  return detail || ("Error " + res.status);
+}
+async function pickModel(){
+  if (S.model) return S.model;
+  if (S.provider === "gemini") {
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=" + encodeURIComponent(S.key));
+      if (r.ok) {
+        const j = await r.json();
+        const names = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace(/^models\//, ""));
+        const good = names.filter(n => /flash/.test(n) && !/(lite|image|tts|audio|live|thinking|exp|embedding|vision)/.test(n));
+        S.model = names.includes("gemini-flash-latest") ? "gemini-flash-latest" : (good.find(n => !/preview/.test(n)) || good[0] || "gemini-flash-latest");
+      } else S.model = "gemini-flash-latest";
+    } catch { S.model = "gemini-flash-latest"; }
+  } else {
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/models?limit=50", { headers: claudeHeaders() });
+      if (r.ok) { const j = await r.json(); const h = (j.data || []).find(m => /haiku/.test(m.id)); S.model = h ? h.id : "claude-haiku-4-5"; }
+      else S.model = "claude-haiku-4-5";
+    } catch { S.model = "claude-haiku-4-5"; }
+  }
+  persist("model"); return S.model;
+}
+function claudeHeaders(){ return { "x-api-key": S.key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true", "content-type": "application/json" }; }
+async function callLLM(system, messages, signal){
+  const model = await pickModel();
+  if (S.provider === "gemini") {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(S.key)}`, {
+      method: "POST", signal, headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+        generationConfig: { temperature: 0.8, responseMimeType: "application/json", maxOutputTokens: 800 }
+      })
+    });
+    if (res.status === 404) { S.model = ""; persist("model"); }
+    if (!res.ok) throw new Error(await friendlyHttpError(res));
+    const j = await res.json();
+    return (j.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
+  } else {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", signal, headers: claudeHeaders(),
+      body: JSON.stringify({ model, max_tokens: 800, system, messages })
+    });
+    if (res.status === 404) { S.model = ""; persist("model"); }
+    if (!res.ok) throw new Error(await friendlyHttpError(res));
+    const j = await res.json();
+    return (j.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  }
+}
+function history(extra){
+  const msgs = [{ role: "user", content: "(Start the conversation now with a short, friendly opening and an easy question. correction must be null.)" }];
+  turns.slice(-30).forEach(t => msgs.push(t));
+  if (msgs.length > 1 && msgs[1].role === "user") msgs.splice(1, 0, { role: "assistant", content: "Hallo!" });
+  if (extra) msgs.push({ role: "user", content: extra });
+  return msgs;
+}
+
+/* ---------- chat ---------- */
+let session = null, turns = [], busy = false, ctl = null, fixes = [], newWords = [];
+const msgs = $("msgs");
+function scrollDown(){ const s = $("chat"); s.scrollTop = s.scrollHeight; }
+function afterSpeak(){ if (S.hands && current === "chat" && !busy) setTimeout(startListening, 250); }
+function tutorBubble(d){
+  const el = document.createElement("div"); el.className = "msg t";
+  const nw = (d.new_words || []).filter(w => w && w.de);
+  el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${esc(d.reply_de)}</div><div class="en-text" hidden>${esc(d.reply_en)}</div>
+    ${nw.length ? `<div class="new">${nw.map(w => `<span lang="de">${esc(w.de)} <i>${esc(w.en)}</i></span>`).join("")}</div>` : ""}
+    <div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="slow">Slow</button><button class="chip" data-a="en">English</button></div></div>`;
+  el.querySelector(".tools").onclick = e => {
+    const a = e.target.dataset.a;
+    if (a === "play") speak(d.reply_de);
+    if (a === "slow") speak(d.reply_de, Math.max(0.5, S.rate - 0.3));
+    if (a === "en") { const en = el.querySelector(".en-text"); en.hidden = !en.hidden; e.target.classList.toggle("on", !en.hidden); scrollDown(); }
+  };
+  msgs.appendChild(el); scrollDown();
+  if (S.autoSpeak) speak(d.reply_de, null, afterSpeak); else afterSpeak();
+}
+function userBubble(text){ const el = document.createElement("div"); el.className = "msg u"; el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${esc(text)}</div></div>`; msgs.appendChild(el); scrollDown(); return el; }
+function markUser(el, c){
+  if (c && c.corrected) { const f = document.createElement("div"); f.className = "fix"; f.innerHTML = `<div class="k">Better</div><div class="c" lang="de">${esc(c.corrected)}</div>${c.note ? `<div class="n">${esc(c.note)}</div>` : ""}`; el.appendChild(f); }
+  else { const ok = document.createElement("div"); ok.className = "okmark"; ok.textContent = "✓ Gut"; el.appendChild(ok); }
+}
+async function ask(userEl, userText){
+  if (!S.key) { show("home"); return; }
+  busy = true; $("sendBtn").disabled = true; setStatus("");
+  const tEl = document.createElement("div"); tEl.className = "msg t"; tEl.innerHTML = `<div class="bub typing" lang="de">Lena denkt nach…</div>`; msgs.appendChild(tEl); scrollDown();
+  ctl = new AbortController();
+  try {
+    const d = parseJSON(await callLLM(systemPrompt(), history(), ctl.signal));
+    if (typeof d.reply_de !== "string") throw new Error("Couldn't read Lena's answer");
+    tEl.remove();
+    if (userEl) { markUser(userEl, d.correction); if (d.correction && d.correction.corrected) fixes.push({ you: userText, better: d.correction.corrected, why: d.correction.note || "" }); }
+    (d.new_words || []).forEach(w => w && w.de && newWords.push({ de: String(w.de), en: String(w.en || "") }));
+    turns.push({ role: "assistant", content: d.reply_de });
+    busy = false; $("sendBtn").disabled = false;
+    tutorBubble(d);
+  } catch (e) {
+    busy = false; $("sendBtn").disabled = false;
+    if (e.name === "AbortError") { tEl.remove(); return; }
+    tEl.querySelector(".bub").innerHTML = `<span class="err">${esc(e.message || "Lena didn't answer. Try again.")}</span>`;
+    if (userEl) { turns.pop(); userEl.remove(); $("input").value = userText; grow(); }
+  }
+}
+function startChat(s){
+  stopAll(); session = s; turns = []; fixes = []; newWords = []; msgs.innerHTML = "";
+  $("handsBtn").classList.toggle("on", S.hands);
+  show("chat", s.title);
+  if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
+  ask(null, null);
+}
+function send(){
+  const text = $("input").value.trim(); if (!text || busy) return;
+  if (listening) { try { rec.abort(); } catch {} }
+  $("input").value = ""; grow();
+  msgs.querySelectorAll(".hintbox").forEach(h => h.remove());
+  const el = userBubble(text); turns.push({ role: "user", content: text });
+  ask(el, text);
+}
+$("sendBtn").onclick = send;
+$("input").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
+function grow(){ const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }
+$("input").oninput = grow;
+function stopAll(){ try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
+
+$("hintBtn").onclick = async () => {
+  if (busy || !turns.length) return;
+  busy = true;
+  const box = document.createElement("div"); box.className = "hintbox"; box.innerHTML = `<span class="typing">Finding an easy answer…</span>`; msgs.appendChild(box); scrollDown();
+  try {
+    const h = parseJSON(await callLLM(systemPrompt(), history('(The learner tapped "Help me answer". Do NOT continue the conversation. Suggest one short, easy reply the learner could say next, using known words. Reply ONLY with JSON: {"de": "...", "en": "..."})')));
+    box.innerHTML = `<div class="label" style="margin-bottom:4px">You could say</div><div class="de-text" lang="de">${esc(h.de)}</div><div class="en-text">${esc(h.en)}</div><div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="use">Use this</button></div>`;
+    box.querySelector(".tools").onclick = e => { const a = e.target.dataset.a; if (a === "play") speak(h.de, Math.max(0.5, S.rate - 0.2)); if (a === "use") { $("input").value = h.de; grow(); } };
+  } catch (e) { box.innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  finally { busy = false; scrollDown(); }
+};
+
+/* ---------- finish ---------- */
+$("endBtn").onclick = () => {
+  stopAll();
+  const mine = turns.filter(t => t.role === "user").length;
+  S.sessions += 1; persist("sessions");
+  if (fixes.length) { S.mistakes = [...fixes.map(f => ({ ...f, at: today() })), ...S.mistakes].slice(0, 200); persist("mistakes"); }
+  const known = new Set(allWords().map(w => w.toLowerCase())); const seen = new Set();
+  const fresh = newWords.filter(w => { const k = w.de.toLowerCase(); if (known.has(k) || seen.has(k)) return false; seen.add(k); return true; });
+  show("summary", "Gut gemacht!");
+  $("summary").innerHTML = `<h2>${esc(session.title)}</h2>
+    <p class="lead">${mine} message${mine === 1 ? "" : "s"} from you · ${fixes.length} correction${fixes.length === 1 ? "" : "s"}</p>
+    <p class="label">Corrections</p>
+    <div class="card">${fixes.length ? fixes.map(f => `<div class="mist"><div class="you" lang="de">${esc(f.you)}</div><div class="better" lang="de">${esc(f.better)}</div><div class="why">${esc(f.why)}</div></div>`).join("") : "No corrections this time. Sehr gut."}</div>
+    <p class="label">New words from Lena</p>
+    <div class="card">${fresh.length ? `<div class="wordwrap">${fresh.map((w,i) => `<label class="w"><input type="checkbox" data-i="${i}" checked> <span lang="de">${esc(w.de)}</span> <i style="font-family:var(--f-en);color:var(--muted)">${esc(w.en)}</i></label>`).join("")}</div><div class="links"><button class="send" id="keepBtn">Add ticked words to my list</button></div>` : "No new words this time."}</div>
+    <div class="links"><button class="send" id="againBtn">Talk again</button><button class="ghost" id="homeBtn2">Home</button></div>`;
+  $("againBtn").onclick = () => startChat(session.mode === "free" ? { ...session, text: pickTopic() } : session);
+  $("homeBtn2").onclick = () => show("home");
+  const kb = $("keepBtn");
+  if (kb) kb.onclick = () => { const pick = [...$("summary").querySelectorAll("input[type=checkbox]")].filter(c => c.checked).map(c => fresh[+c.dataset.i].de); const n = addWords(pick); kb.textContent = n ? `Added ${n} word${n === 1 ? "" : "s"}` : "Nothing to add"; kb.disabled = true; };
+};
+
+/* ---------- words ---------- */
+function addWords(list){
+  const known = new Set(allWords().map(w => w.toLowerCase()));
+  const add = [...new Set(list.map(w => w.trim()).filter(w => w && !known.has(w.toLowerCase())))];
+  if (add.length) { S.added = [...S.added, ...add]; persist("added"); }
+  return add.length;
+}
+function renderWords(){
+  const added = new Set(S.added);
+  $("wordList").innerHTML = allWords().map(w => `<span class="w${added.has(w) ? " added" : ""}" lang="de">${esc(w)}</span>`).join("");
+  $("mistList").innerHTML = S.mistakes.length ? S.mistakes.slice(0, 50).map(f => `<div class="mist"><div class="you" lang="de">${esc(f.you)}</div><div class="better" lang="de">${esc(f.better)}</div><div class="why">${esc(f.why)}</div></div>`).join("") : "No mistakes saved yet. They appear here after you tap Finish.";
+}
+$("addBtn").onclick = () => { const n = addWords($("addInput").value.split(",")); $("addInput").value = ""; renderWords(); $("addBtn").textContent = n ? `Added ${n}` : "Add"; setTimeout(() => $("addBtn").textContent = "Add", 1500); };
+$("addInput").onkeydown = e => { if (e.key === "Enter") $("addBtn").click(); };
+
+/* ---------- settings ---------- */
+const KEY_HELP = {
+  gemini: 'Free: go to aistudio.google.com → "Get API key" → Create API key, then paste it here.',
+  claude: "Paid per use (separate from your Claude subscription): console.anthropic.com → API keys."
+};
+function renderVoiceList(){
+  $("voice").innerHTML = voices.length ? voices.map(v => `<option value="${esc(v.voiceURI)}"${v.voiceURI === (germanVoice()||{}).voiceURI ? " selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("") : `<option value="">No German voice found yet</option>`;
+}
+function renderSettings(){
+  $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
+  $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
+  $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("testOut").textContent = "";
+  renderVoiceList();
+}
+$("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
+$("apiKey").onchange = () => { S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model"); };
+$("level").onchange = () => { S.level = $("level").value; persist("level"); };
+$("voice").onchange = () => { S.voice = $("voice").value; persist("voice"); };
+$("rate").oninput = () => { S.rate = +$("rate").value; $("rateOut").textContent = S.rate.toFixed(2) + "×"; persist("rate"); };
+$("autoSpeak").onchange = () => { S.autoSpeak = $("autoSpeak").checked; persist("autoSpeak"); };
+$("autoSend").onchange = () => { S.autoSend = $("autoSend").checked; persist("autoSend"); };
+$("voiceTest").onclick = () => speak("Hallo! Ich bin Lena. Wie geht es dir?");
+$("testBtn").onclick = async () => {
+  S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model");
+  if (!S.key) { $("testOut").textContent = "Paste a key first."; return; }
+  $("testOut").textContent = "Testing…";
+  try { const t = await callLLM('Reply with ONLY JSON: {"ok": true}', [{ role: "user", content: "Test" }]); parseJSON(t); $("testOut").textContent = "Works ✓ (" + S.model + ")"; }
+  catch (e) { $("testOut").textContent = e.message; }
+};
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+show("home");
+})();
+</script>
+</body>
+</html>
