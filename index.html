@@ -25,7 +25,7 @@
   --f-en:"Newsreader",Georgia,"Times New Roman",serif;
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0F1013; --surface:#1A1C21; --ink:#EDEBE6; --muted:#9A9890; --line:#2E3138; --soft-line:#2A2D33;
   --bw:1px; --accent:#E5484D; --accent-ink:#FFFFFF; --accent-soft:#3A1A1C;
   --gold:#E9B949; --gold-ink:#111111; --gold-soft:#2E2715;
@@ -33,6 +33,14 @@
   --disc:#23262C; --fix:#E9B949; --fix-soft:#2B2414; --ok:#5FD39A; --live:#E5484D;
   --cold:#7BA6F0; --cool:#7D8590; --warm:#E9B949; --hot:#E5484D;
   color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1013; --surface:#1A1C21; --ink:#EDEBE6; --muted:#9A9890; --line:#2E3138; --soft-line:#2A2D33;
+  --bw:1px; --accent:#E5484D; --accent-ink:#FFFFFF; --accent-soft:#3A1A1C;
+  --gold:#E9B949; --gold-ink:#111111; --gold-soft:#2E2715;
+  --prime:#211F19; --prime-ink:#EDEBE6; --prime-title:#E9B949;
+  --disc:#23262C; --fix:#E9B949; --fix-soft:#2B2414; --ok:#5FD39A; --live:#E5484D;
+  --cold:#7BA6F0; --cool:#7D8590; --warm:#E9B949; --hot:#E5484D;
+  color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
@@ -224,6 +232,10 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .invite-list{display:flex;flex-direction:column}
 .invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--soft-line);overflow-wrap:anywhere}
 .toggle{display:none}
+.seg{display:flex;border:var(--bw) solid var(--line)}
+.seg button{border:0;background:transparent;padding:7px 12px;font-size:14px;font-weight:600;color:var(--muted)}
+.seg button + button{border-left:1px solid var(--soft-line)}
+.seg button.on{background:var(--ink);color:var(--bg)}
 .newshead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .newshead .lead{margin:0 0 6px}
 .nsec{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted)}
@@ -430,6 +442,12 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     </div>
     <small class="hint" id="keyHelp"></small>
 
+    <p class="label">Appearance</p>
+    <div class="sgroup">
+      <div class="srow"><span>Theme</span><div class="seg" id="themeSeg" role="group" aria-label="Theme"><button data-theme="system">Auto</button><button data-theme="light">Light</button><button data-theme="dark">Dark</button></div></div>
+    </div>
+    <small class="hint">Auto follows your phone's setting.</small>
+
     <p class="label">Voice</p>
     <div class="sgroup">
       <div class="srow"><label for="voice">German voice</label><select id="voice"></select></div>
@@ -497,7 +515,16 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.8.1";
+const VERSION = "1.8.2";
+/* ---------- light / dark theme ---------- */
+function applyTheme(t){
+  const root = document.documentElement;
+  if (t === "light" || t === "dark") root.dataset.theme = t; else delete root.dataset.theme;
+  const dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", dark ? "#0F1013" : "#EEEDEA"));
+  document.querySelectorAll("#themeSeg button").forEach(b => b.classList.toggle("on", b.dataset.theme === (t || "system")));
+}
+try { applyTheme(JSON.parse(localStorage.getItem("lena:theme")) || "system"); } catch { applyTheme("system"); }
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -522,11 +549,11 @@ const store = {
 const S = {
   provider: store.get("provider","gemini"), key: store.get("key",""), level: store.get("level","A1"),
   voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
-  autoListen: store.get("autoListen",false), seeded: store.get("seeded",false), recentStories: store.get("recentStories",[]), model: store.get("model",""), adv: store.get("adv",false),
+  autoListen: store.get("autoListen",false), theme: store.get("theme","system"), seeded: store.get("seeded",false), recentStories: store.get("recentStories",[]), model: store.get("model",""), adv: store.get("adv",false),
   added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[]),
   stats: store.get("stats",{}), en: store.get("en",{}), onboarded: store.get("onboarded",false), placement: store.get("placement",null)
 };
-const SYNCED = ["onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
+const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
 let userRef = null, syncTimer = null;
 const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
 function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
@@ -958,7 +985,7 @@ function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
   $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
-  renderVoiceList(); renderAccount();
+  renderVoiceList(); renderAccount(); applyTheme(S.theme);
 }
 $("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
 $("apiKey").onchange = () => { S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model"); };
@@ -967,6 +994,8 @@ $("voice").onchange = () => { S.voice = $("voice").value; persist("voice"); };
 $("rate").oninput = () => { S.rate = +$("rate").value; $("rateOut").textContent = S.rate.toFixed(2) + "×"; persist("rate"); };
 $("autoSpeak").onchange = () => { S.autoSpeak = $("autoSpeak").checked; persist("autoSpeak"); };
 $("autoSend").onchange = () => { S.autoSend = $("autoSend").checked; persist("autoSend"); };
+$("themeSeg").onclick = e => { const b = e.target.closest("[data-theme]"); if (!b) return; S.theme = b.dataset.theme; persist("theme"); applyTheme(S.theme); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyTheme(S.theme));
 $("autoListen").onchange = () => { S.autoListen = $("autoListen").checked; persist("autoListen"); };
 $("voiceTest").onclick = () => speak("Hallo! Ich bin Lena. Wie geht es dir?");
 $("testBtn").onclick = async () => {
@@ -1354,6 +1383,7 @@ async function onUser(u){
       SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } });
     }
     userRef = ref;
+    applyTheme(S.theme);
     seedWords();
     if (!snap.exists || (!snap.data().key && S.key)) syncNow();
     show("home");
