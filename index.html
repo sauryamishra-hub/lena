@@ -13,17 +13,22 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap">
 <style>
 :root{
-  --bg:#F5F6F8; --surface:#FFFFFF; --ink:#141820; --muted:#5E6675; --line:#DDE1E8;
-  --accent:#1D4FB0; --accent-ink:#FFFFFF; --accent-soft:#E6EDFA;
-  --fix:#9A5B00; --fix-soft:#FFF3DF; --ok:#1F7A4A; --live:#C0352B;
+  /* Flag palette: Schwarz, Rot, Gold */
+  --bg:#F4F4F2; --surface:#FFFFFF; --ink:#141414; --muted:#5F5F5A; --line:#E3E2DE;
+  --accent:#D00000; --accent-ink:#FFFFFF; --accent-soft:#FBE6E6;
+  --gold:#FFCE00; --gold-soft:#FFF4C2; --hdr:#141414; --hdr-ink:#FFFFFF;
+  --fix:#8A6500; --fix-soft:#FFF4C2; --ok:#1E7F4C; --live:#D00000;
+  --cold:#4A7FD8; --cool:#8C96A3; --warm:#E8A400; --hot:#D00000;
   --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-en:"Newsreader",Georgia,"Times New Roman",serif;
   --r:14px; color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#0E1117; --surface:#171B23; --ink:#E9ECF2; --muted:#98A1B2; --line:#2A303C;
-  --accent:#7EA4F2; --accent-ink:#0B1530; --accent-soft:#1A2640;
-  --fix:#F0B65A; --fix-soft:#2D2412; --ok:#6BCB95; --live:#FF7B6E; color-scheme:dark}}
+  --bg:#0E0E0F; --surface:#19191B; --ink:#EDEDEA; --muted:#A3A39D; --line:#2B2B2E;
+  --accent:#FF4040; --accent-ink:#FFFFFF; --accent-soft:#3A1414;
+  --gold:#FFCE00; --gold-soft:#332A08; --hdr:#000000; --hdr-ink:#FFFFFF;
+  --fix:#FFCE00; --fix-soft:#2E2608; --ok:#5FD39A; --live:#FF4040;
+  --cold:#7BA6F0; --cool:#7D8590; --warm:#FFCE00; --hot:#FF4040; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
@@ -148,6 +153,58 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .invite-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;overflow-wrap:anywhere}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- v1.4 flag theme ---- */
+.bar{background:var(--hdr);color:var(--hdr-ink);border-bottom:0;position:relative;padding-block:12px 18px}
+.bar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(var(--accent) 0 50%,var(--gold) 50% 100%)}
+.bar .ghost{background:transparent;border-color:rgba(255,255,255,.3);color:#fff}
+.ver{color:var(--gold);border-color:rgba(255,206,0,.55)}
+.switch{background:transparent;border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.85)}
+.switch i{background:rgba(255,255,255,.25)} .switch i::after{background:#fff}
+.switch.on{color:var(--gold);border-color:var(--gold)} .switch.on i{background:var(--gold)} .switch.on i::after{background:#141414}
+.logo-img{background:#fff}
+.hero{background:var(--hdr);color:#fff;position:relative;overflow:hidden;padding-bottom:28px}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;background:linear-gradient(var(--accent) 0 50%,var(--gold) 50% 100%)}
+.hero .big{color:var(--gold)}
+.hero.alt{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.hero.alt .big{color:var(--accent)} .hero.alt .small{color:var(--muted)}
+.stat{border-top:4px solid var(--hdr)} .stat:nth-child(2){border-top-color:var(--accent)} .stat:nth-child(3){border-top-color:var(--gold)}
+.t .bub{border-left:4px solid var(--accent)}
+.u .bub{background:var(--ink);color:var(--bg)}
+.fix{border-left-color:var(--gold)} .fix .k{color:var(--fix)}
+.new span{background:var(--gold-soft);color:var(--ink)}
+.wd.sel{background:var(--gold-soft);border-bottom-color:var(--gold)}
+.pop{background:var(--hdr);color:#fff;border-top:3px solid var(--gold)}
+.big-btn{box-shadow:0 0 0 9px var(--hdr),0 0 0 18px var(--gold),0 18px 40px rgba(208,0,0,.25)}
+.orb.thinking{background:var(--gold);color:#141414}
+.orb.speaking{background:var(--hdr);color:var(--gold);box-shadow:0 0 0 3px var(--gold)}
+.center .hello{font-size:30px}
+/* word warmth */
+.heat{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--line);margin:4px 0 8px}
+.heat i{display:block;height:100%}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:22px}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--c)}
+.w{cursor:pointer;font:inherit;color:var(--ink);position:relative;padding-left:20px}
+.w::before{content:"";position:absolute;left:8px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--c,var(--cool))}
+.w.cold{--c:var(--cold)} .w.cool{--c:var(--cool)} .w.warm{--c:var(--warm);border-color:var(--warm)} .w.hot{--c:var(--hot);border-color:var(--hot);background:var(--accent-soft)}
+.grp{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;margin:16px 0 8px;color:var(--muted)}
+/* vocab drill */
+.vhead{display:flex;justify-content:space-between;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:12px}
+.vbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:18px}
+.vbar i{display:block;height:100%;background:linear-gradient(90deg,var(--hdr),var(--accent),var(--gold));transition:width .3s}
+.vcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px 20px;text-align:center;position:relative;overflow:hidden}
+.vcard::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:linear-gradient(90deg,var(--hdr) 0 33.3%,var(--accent) 33.3% 66.6%,var(--gold) 66.6%)}
+.ven{font-family:var(--f-en);font-style:italic;font-size:36px;line-height:1.15;margin:8px 0 4px;overflow-wrap:anywhere}
+.vres{margin-top:14px;font-size:18px}
+.vres b{font-size:26px;display:block;margin-top:4px}
+.vres.ok{color:var(--ok)} .vres.no{color:var(--accent)}
+.vres small{display:block;color:var(--muted);font-size:14px;margin-top:6px}
+.vmic{display:flex;flex-direction:column;align-items:center;gap:8px;margin:22px 0 14px}
+.vmic .phase{text-align:center;max-width:none}
+.vrow{display:flex;gap:8px}
+.vrow input{flex:1;min-width:0}
+.vlist div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.vlist div:first-child{border-top:0}
 </style>
 </head>
 <body>
@@ -188,11 +245,14 @@ p.lead{color:var(--muted);margin:0 0 16px}
       <input type="text" id="topicInput" placeholder="…or name a topic: cricket, Diwali, my work" autocomplete="off">
       <button class="send" id="topicBtn">Talk</button>
     </div>
+    <button class="hero alt" id="vocabBtn"><span class="big" lang="de">Vokabeln</span><span class="small">Quick drill: see the English, say the German.</span></button>
     <div class="stats">
       <div class="stat"><b id="sStreak">0</b><span>Day streak</span></div>
-      <div class="stat"><b id="sWords">0</b><span>Words</span></div>
+      <div class="stat"><b id="sWords">0</b><span>Warm words</span></div>
       <div class="stat"><b id="sSessions">0</b><span>Chats</span></div>
     </div>
+    <div class="heat" id="heatBar"></div>
+    <div class="legend" id="heatLegend"></div>
     <p class="label">Practise a situation</p>
     <div class="grid" id="scenes"></div>
     <div class="links"><button class="ghost" id="wordsBtn">My words &amp; mistakes</button></div>
@@ -224,15 +284,40 @@ p.lead{color:var(--muted);margin:0 0 16px}
 
   <main class="scroll pad" id="words" hidden>
     <h2>My words</h2>
-    <p class="lead">Lena builds conversations from these. Add new Duolingo words, separated by commas.</p>
+    <p class="lead">Each word warms up as you use it correctly and cools down if you don't use it for a while. Lena steers chats toward your coldest words. Tap a word to see its record.</p>
+    <div class="heat" id="heatBar2"></div>
+    <div class="legend" id="heatLegend2"></div>
+    <div class="links" style="margin:0 0 20px"><button class="send" id="drillCold">Drill my coldest words</button></div>
+    <p class="label">Add new words (comma-separated)</p>
     <div class="addrow"><input type="text" id="addInput" placeholder="Apfel, morgen, ich möchte" lang="de"><button class="send" id="addBtn">Add</button></div>
-    <div class="wordwrap" id="wordList"></div>
+    <div id="wordList"></div>
     <h2 style="margin-top:28px">Mistakes to review</h2>
     <p class="lead">From past chats, newest first.</p>
     <div class="card" id="mistList"></div>
   </main>
 
   <main class="scroll pad" id="summary" hidden></main>
+
+  <main class="scroll pad" id="vocab" hidden>
+    <div id="vPlay">
+      <div class="vhead"><span id="vProg">1 / 10</span><span id="vScore">0 richtig</span></div>
+      <div class="vbar"><i id="vBarFill" style="width:0"></i></div>
+      <div class="vcard">
+        <div class="label" style="margin:0">Say it in German</div>
+        <div class="ven" id="vEn"></div>
+        <div class="vres" id="vRes" hidden></div>
+      </div>
+      <div class="vmic">
+        <button class="orb" id="vMic" aria-label="Say the German word">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <div class="phase" id="vPhase">Tap and say it<small></small></div>
+      </div>
+      <div class="vrow"><input type="text" id="vType" placeholder="…or type it" lang="de" autocomplete="off" autocapitalize="off"><button class="send" id="vCheck">Check</button></div>
+      <div class="links" style="justify-content:center"><button class="ghost" id="vShow">Show answer</button><button class="send" id="vNext" hidden>Next</button></div>
+    </div>
+    <div id="vDone" hidden></div>
+  </main>
 
   <main class="scroll pad" id="settings" hidden>
     <h2>Settings</h2>
@@ -285,6 +370,8 @@ p.lead{color:var(--muted);margin:0 0 16px}
 (() => {
 const BASE_WORDS = ["Tee","Café","bitte","oder","hallo","Zucker","Milch","mit","danke","Wasser","Kekse","und","tschüss","ich bin","ich komme aus","Tokio","Paris","Toronto","London","Berlin","und du","freut mich","mein","dein","Mama","Papa","Schwester","Bruder","Tochter","das ist","ist","lustig","nett","gut","schön","guck mal","hungrig","durstig","satt","müde","billig","lecker","das Restaurant","die","das","Wurst","Pizza","Fleisch","Salat","Käse","Schnitzel","Brot","Kaffee","Cola","trinken","alt","groß","klein","Stadt","Hotel","wo ist","hier","Park","Bahnhof","links","rechts","da drüben","Bäckerei","U-Bahn","Bibliothek","Toilette","Zoo","Taxi","Imbiss","geöffnet","Mann","Frau","Lehrer","Lehrerin","Bäcker","Bäckerin","Verkäufer","Verkäuferin","Musiker","ich","du","sie","ihr","wir","sind","bist","ja","nein","dir","mir","sportlich","schwimmen","joggen","wandern","spielen","Fußball","Tennis","Sport","Yoga","Musik","Party","cool","oft","nie","sehr","laut","draußen","brauchen","gehen","nach Hause","Handy","Entschuldigung","wirklich"];
 
+const EN = {"Tee":"tea","Café":"café","bitte":"please","oder":"or","hallo":"hello","Zucker":"sugar","Milch":"milk","mit":"with","danke":"thank you","Wasser":"water","Kekse":"biscuits","und":"and","tschüss":"bye","ich bin":"I am","ich komme aus":"I come from","Tokio":"Tokyo","und du":"and you?","freut mich":"nice to meet you","mein":"my","dein":"your","Mama":"mum","Papa":"dad","Schwester":"sister","Bruder":"brother","Tochter":"daughter","das ist":"this is","ist":"is","lustig":"funny","nett":"nice","gut":"good","schön":"beautiful","guck mal":"look!","hungrig":"hungry","durstig":"thirsty","satt":"full (not hungry)","müde":"tired","billig":"cheap","lecker":"tasty","das Restaurant":"the restaurant","die":"the (feminine)","das":"the (neuter)","Wurst":"sausage","Fleisch":"meat","Salat":"salad","Käse":"cheese","Brot":"bread","Kaffee":"coffee","trinken":"to drink","alt":"old","groß":"big","klein":"small","Stadt":"city","wo ist":"where is","hier":"here","Bahnhof":"train station","links":"left","rechts":"right","da drüben":"over there","Bäckerei":"bakery","U-Bahn":"underground train","Bibliothek":"library","Toilette":"toilet","Imbiss":"snack bar","geöffnet":"open","Mann":"man","Frau":"woman","Lehrer":"teacher (male)","Lehrerin":"teacher (female)","Bäcker":"baker (male)","Bäckerin":"baker (female)","Verkäufer":"salesman","Verkäuferin":"saleswoman","Musiker":"musician","ich":"I","du":"you (one friend)","sie":"she","ihr":"you (several friends)","wir":"we","sind":"are (we / they)","bist":"are (you)","ja":"yes","nein":"no","dir":"to you","mir":"to me","sportlich":"sporty","schwimmen":"to swim","joggen":"to jog","wandern":"to hike","spielen":"to play","Fußball":"football","Sport":"sport","Musik":"music","oft":"often","nie":"never","sehr":"very","laut":"loud","draußen":"outside","brauchen":"to need","gehen":"to go","nach Hause":"(going) home","Handy":"mobile phone","Entschuldigung":"excuse me","wirklich":"really"};
+
 const TOPICS = ["what you drank this morning (tea or coffee)","the weather today","your family","your weekend","food you like","sports you play or watch","music","your city","a café you like","travel and cities you know (Paris, London, Tokio, Berlin)","being tired, hungry or thirsty","your phone","going for a walk or hike","a restaurant visit","your work day","friends","a party","the park and the zoo","going home by taxi or U-Bahn","bread and the bakery","cricket and football","festivals like Diwali","your favourite place","yoga and staying fit","something funny that happened","what is open or closed today","a teacher you remember","the library and books","cheap vs. expensive things","noise in the city"];
 
 const SCENES = [
@@ -296,7 +383,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -322,9 +409,10 @@ const S = {
   provider: store.get("provider","gemini"), key: store.get("key",""), level: store.get("level","A1"),
   voice: store.get("voice",""), rate: store.get("rate",0.9), autoSpeak: store.get("autoSpeak",true), autoSend: store.get("autoSend",true),
   hands: store.get("hands",false), model: store.get("model",""), adv: store.get("adv",false),
-  added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[])
+  added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[]),
+  stats: store.get("stats",{}), en: store.get("en",{})
 };
-const SYNCED = ["added","mistakes","days","sessions","recentTopics","key","provider","level","rate","autoSpeak","autoSend","adv"];
+const SYNCED = ["added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv"];
 let userRef = null, syncTimer = null;
 const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
 function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
@@ -332,7 +420,7 @@ const allWords = () => [...new Set([...BASE_WORDS, ...S.added])];
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
 /* ---------- views ---------- */
-const VIEWS = ["gate","simple","home","chat","words","summary","settings"];
+const VIEWS = ["gate","simple","home","chat","words","summary","settings","vocab"];
 let current = "home";
 function show(v, title){
   if (v === "home" && !S.adv) v = "simple";
@@ -355,7 +443,9 @@ $("goBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show
 $("setupBtn").onclick = () => { renderSettings(); show("settings", "Settings"); };
 function renderHome(){
   $("needKey").hidden = !!S.key; $("setupBtn").hidden = !!S.key;
-  $("sStreak").textContent = streak(); $("sWords").textContent = allWords().length; $("sSessions").textContent = S.sessions;
+  $("sStreak").textContent = streak(); $("sSessions").textContent = S.sessions;
+  const h = heatCounts(); $("sWords").textContent = h.warm + h.hot;
+  renderHeat("heatBar", "heatLegend");
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
 $("scenes").onclick = e => { const b = e.target.closest(".scene"); if (b) { const s = SCENES[+b.dataset.i]; startChat({ title: s.de, mode: "scene", text: s.brief }); } };
@@ -453,6 +543,9 @@ LEVEL: ${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}
 
 WORDS THE LEARNER KNOWS: ${allWords().join(", ")}
 
+FOCUS WORDS (the learner's least-practised words): ${focusWords().join(", ")}
+- Weave one or two focus words naturally into each reply, and ask questions that invite the learner to use them.
+
 HOW TO REPLY
 - Natural, friendly spoken German. Build mainly from the known words.
 - Introduce at most 2 new words per reply and list them in new_words.
@@ -465,10 +558,14 @@ CHECK THE LEARNER'S LATEST MESSAGE
 - Real error (wrong word, grammar, word order, article, verb ending) → correction = {"corrected": fixed sentence, "note": very short English explanation}.
 - Fine → correction = null. Be encouraging, never lecture.
 
-GLOSSARY: for EVERY word in reply_de, give its English meaning as used in this sentence (so the learner can tap any word).
+GLOSSARY: for EVERY word in reply_de, give its English meaning as used in this sentence (so the learner can tap any word), and its dictionary form.
+
+WORD TRACKING (use the exact spelling from the WORDS THE LEARNER KNOWS list; match inflected forms to their list entry, e.g. "trinke" -> "trinken"):
+- learner_used: every listed word the learner used in their latest message, with ok=false if they used that word wrongly (wrong form, ending, article or meaning).
+- lena_used: every listed word you used in reply_de.
 
 Reply with ONLY JSON, no markdown:
-{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning"}]}`;
+{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning", "base": "dictionary form"}], "learner_used": [{"w": "list entry", "ok": true}], "lena_used": ["list entry"]}`;
 }
 function parseJSON(text){
   if (!text) throw new Error("Empty answer");
@@ -598,6 +695,7 @@ async function ask(userEl, userText){
     tEl.remove();
     if (userEl) { markUser(userEl, d.correction); if (d.correction && d.correction.corrected) fixes.push({ you: userText, better: d.correction.corrected, why: d.correction.note || "" }); }
     (d.new_words || []).forEach(w => w && w.de && newWords.push({ de: String(w.de), en: String(w.en || "") }));
+    trackUsage(userEl ? d.learner_used : null, d.lena_used);
     turns.push({ role: "assistant", content: d.reply_de });
     busy = false; $("sendBtn").disabled = false;
     tutorBubble(d);
@@ -628,7 +726,7 @@ $("sendBtn").onclick = send;
 $("input").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 function grow(){ const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }
 $("input").oninput = grow;
-function stopAll(){ loop = false; try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
+function stopAll(){ loop = false; try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
 
 $("hintBtn").onclick = async () => {
   if (busy || !turns.length) return;
@@ -661,7 +759,7 @@ $("endBtn").onclick = () => {
   $("againBtn").onclick = () => startChat(session.mode === "free" ? { ...session, text: pickTopic() } : session);
   $("homeBtn2").onclick = () => show("home");
   const kb = $("keepBtn");
-  if (kb) kb.onclick = () => { const pick = [...$("summary").querySelectorAll("input[type=checkbox]")].filter(c => c.checked).map(c => fresh[+c.dataset.i].de); const n = addWords(pick); kb.textContent = n ? `Added ${n} word${n === 1 ? "" : "s"}` : "Nothing to add"; kb.disabled = true; };
+  if (kb) kb.onclick = () => { const picked = [...$("summary").querySelectorAll("input[type=checkbox]")].filter(c => c.checked).map(c => fresh[+c.dataset.i]); picked.forEach(w => { if (w.en) S.en[w.de] = w.en; }); persist("en"); const pick = picked.map(w => w.de); const n = addWords(pick); pick.forEach(w => bump(w, "l")); persist("stats"); kb.textContent = n ? `Added ${n} word${n === 1 ? "" : "s"}` : "Nothing to add"; kb.disabled = true; };
 };
 
 /* ---------- words ---------- */
@@ -672,8 +770,11 @@ function addWords(list){
   return add.length;
 }
 function renderWords(){
-  const added = new Set(S.added);
-  $("wordList").innerHTML = allWords().map(w => `<span class="w${added.has(w) ? " added" : ""}" lang="de">${esc(w)}</span>`).join("");
+  renderHeat("heatBar2", "heatLegend2");
+  const groups = { hot: [], warm: [], cool: [], cold: [] };
+  allWords().map(w => [w, warmth(w)]).sort((a, b) => b[1] - a[1]).forEach(([w, t]) => groups[level(t)].push(w));
+  $("wordList").innerHTML = Object.entries(groups).filter(([, ws]) => ws.length).map(([lv, ws]) =>
+    `<p class="grp">${HEAT[lv].label} · ${ws.length}</p><div class="wordwrap">${ws.map(w => `<button class="w ${lv}" data-w="${esc(w)}" lang="de">${esc(w)}</button>`).join("")}</div>`).join("");
   $("mistList").innerHTML = S.mistakes.length ? S.mistakes.slice(0, 50).map(f => `<div class="mist"><div class="you" lang="de">${esc(f.you)}</div><div class="better" lang="de">${esc(f.better)}</div><div class="why">${esc(f.why)}</div></div>`).join("") : "No mistakes saved yet. They appear here after you tap Finish.";
 }
 $("addBtn").onclick = () => { const n = addWords($("addInput").value.split(",")); $("addInput").value = ""; renderWords(); $("addBtn").textContent = n ? `Added ${n}` : "Add"; setTimeout(() => $("addBtn").textContent = "Add", 1500); };
@@ -709,12 +810,133 @@ $("testBtn").onclick = async () => {
   catch (e) { $("testOut").textContent = e.message; }
 };
 
+/* ---------- word warmth: how well each word is known ---------- */
+// Per word: s = times you said it, c = said correctly, x = said wrongly, l = heard from Lena,
+// vo / vm = drill right / missed, k = looked up, t = last activity (ms).
+const DAY = 86400000;
+const HEAT = { cold: { label: "Cold", c: "var(--cold)" }, cool: { label: "Cool", c: "var(--cool)" }, warm: { label: "Warm", c: "var(--warm)" }, hot: { label: "Hot", c: "var(--hot)" } };
+function entryFor(w){ const k = String(w || "").trim().toLowerCase(); if (!k) return null; return allWords().find(x => x.toLowerCase() === k) || null; }
+function stat(w){ const k = w.toLowerCase(); S.stats = S.stats || {}; return S.stats[k] || (S.stats[k] = { s: 0, c: 0, x: 0, l: 0, vo: 0, vm: 0, k: 0, t: 0 }); }
+function bump(w, f, n = 1){ const st = stat(w); st[f] = (st[f] || 0) + n; st.t = Date.now(); }
+function warmth(w){
+  const st = (S.stats || {})[w.toLowerCase()]; if (!st) return 0;
+  const pts = 12 * (st.c || 0) + 6 * (st.vo || 0) + 1.5 * (st.l || 0) - 6 * (st.x || 0) - 5 * (st.vm || 0) - 3 * (st.k || 0);
+  const base = 100 * (1 - Math.exp(-Math.max(0, pts) / 45));
+  const days = st.t ? (Date.now() - st.t) / DAY : 0;
+  return Math.round(base * (0.55 + 0.45 * Math.exp(-days / 21)));
+}
+const level = t => t >= 70 ? "hot" : t >= 40 ? "warm" : t >= 15 ? "cool" : "cold";
+function heatCounts(){ const h = { cold: 0, cool: 0, warm: 0, hot: 0 }; allWords().forEach(w => h[level(warmth(w))]++); return h; }
+function renderHeat(barId, legendId){
+  const h = heatCounts(), total = allWords().length || 1, order = ["hot", "warm", "cool", "cold"];
+  $(barId).innerHTML = order.map(k => `<i style="width:${(h[k] / total * 100).toFixed(2)}%;background:${HEAT[k].c}"></i>`).join("");
+  $(legendId).innerHTML = order.map(k => `<span style="--c:${HEAT[k].c}">${HEAT[k].label} ${h[k]}</span>`).join("");
+}
+function focusWords(n = 8){
+  const scored = allWords().map(w => [w, warmth(w) + Math.random() * 12]).sort((a, b) => a[1] - b[1]);
+  return scored.slice(0, n).map(x => x[0]);
+}
+function trackUsage(learner, lena){
+  let changed = false;
+  (Array.isArray(learner) ? learner : []).forEach(u => { const w = entryFor(u && u.w); if (!w) return; bump(w, "s"); bump(w, u.ok === false ? "x" : "c"); changed = true; });
+  (Array.isArray(lena) ? lena : []).forEach(x => { const w = entryFor(x); if (w) { bump(w, "l"); changed = true; } });
+  if (changed) persist("stats");
+}
+const ago = t => { if (!t) return "never"; const d = Math.floor((Date.now() - t) / DAY); return d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago"; };
+$("wordList").addEventListener("click", e => {
+  const b = e.target.closest("[data-w]"); if (!b) return; e.stopPropagation();
+  const w = b.dataset.w, st = (S.stats || {})[w.toLowerCase()] || {}, t = warmth(w);
+  hidePop(); b.classList.add("sel");
+  placePop(b, `${w} · ${HEAT[level(t)].label} ${t}°`, `${enOf(w) || "meaning not saved yet"} — said ${st.c || 0}× right, ${st.x || 0}× wrong · drill ${st.vo || 0}/${(st.vo || 0) + (st.vm || 0)} · looked up ${st.k || 0}× · last ${ago(st.t)}`);
+});
+
+/* ---------- Vokabeln: quick drill ---------- */
+function enOf(w){ return (S.en && S.en[w]) || EN[w] || ""; }
+const fold = x => String(x || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+  .replace(/[^a-z\s-]/g, " ").replace(/\s+/g, " ").trim().replace(/^(der|die|das|den|ein|eine) (?=\S)/, "");
+function lev(a, b){ const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i]); for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)); return d[m][n]; }
+function matches(said, target){
+  const a = fold(said), b = fold(target); if (!a || !b) return false;
+  if (a === b || (" " + a + " ").includes(" " + b + " ")) return true;
+  return b.length >= 6 && lev(a, b) <= 1;
+}
+let V = null, vrec = null, vListening = false;
+function setVPhase(text, note){ $("vPhase").firstChild.textContent = text; $("vPhase").querySelector("small").textContent = note || ""; }
+async function ensureMeanings(){
+  const missing = allWords().filter(w => !enOf(w)).slice(0, 60); if (!missing.length || !S.key) return;
+  try {
+    const j = parseJSON(await callLLM('Give a short English meaning for each German word or phrase. Reply ONLY with a JSON object mapping each one (exactly as given) to its meaning.', [{ role: "user", content: JSON.stringify(missing) }]));
+    if (j && typeof j === "object") { Object.entries(j).forEach(([k, v]) => { const w = entryFor(k); if (w && v) S.en[w] = String(v); }); persist("en"); }
+  } catch {}
+}
+async function startVocab(){
+  stopAll(); show("vocab", "Vokabeln"); $("vPlay").hidden = true; $("vDone").hidden = false; $("vDone").innerHTML = `<p class="lead">Picking your words…</p>`;
+  await ensureMeanings();
+  const pool = allWords().filter(w => enOf(w) && fold(enOf(w)) !== fold(w));
+  if (!pool.length) { $("vDone").innerHTML = `<p class="lead">No words with English meanings yet.</p>`; return; }
+  const byCold = pool.map(w => [w, warmth(w) + Math.random() * 15]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+  const cold = byCold.slice(0, 16).sort(() => Math.random() - .5).slice(0, 8);
+  const rest = byCold.filter(w => !cold.includes(w)).sort(() => Math.random() - .5).slice(0, 2);
+  V = { list: [...cold, ...rest].sort(() => Math.random() - .5), i: 0, ok: 0, res: [] };
+  $("vPlay").hidden = false; $("vDone").hidden = true; vCard();
+}
+function vCard(){
+  const w = V.list[V.i]; V.done = false;
+  $("vEn").textContent = enOf(w); $("vProg").textContent = `${V.i + 1} / ${V.list.length}`; $("vScore").textContent = `${V.ok} richtig`;
+  $("vBarFill").style.width = (V.i / V.list.length * 100) + "%";
+  $("vRes").hidden = true; $("vType").value = ""; $("vNext").hidden = true; $("vShow").hidden = false; $("vMic").className = "orb";
+  setVPhase("Tap and say it", "");
+}
+function vJudge(alts){ if (!V || V.done) return; const target = V.list[V.i]; const ok = alts.some(a => matches(a, target)); vResult(ok, alts[0] || ""); }
+function vResult(ok, said){
+  if (V.done) return; V.done = true;
+  const w = V.list[V.i]; bump(w, ok ? "vo" : "vm"); persist("stats");
+  V.res.push({ w, ok }); if (ok) V.ok++;
+  const r = $("vRes"); r.hidden = false; r.className = "vres " + (ok ? "ok" : "no");
+  r.innerHTML = ok ? `Richtig!<b lang="de">${esc(w)}</b>` : `It's<b lang="de">${esc(w)}</b>${said ? `<small>You said “${esc(said)}”</small>` : ""}`;
+  $("vScore").textContent = `${V.ok} richtig`; $("vShow").hidden = true; $("vNext").hidden = false; $("vMic").className = "orb";
+  setVPhase(ok ? "Gut gemacht" : "Listen and repeat", ok ? "" : "Tap the mic to try once more.");
+  speak(w, Math.max(0.6, S.rate - 0.1));
+  if (ok) setTimeout(() => { if (V && V.done && V.list[V.i] === w && current === "vocab") vNext(); }, 1600);
+}
+function vNext(){
+  V.i++;
+  if (V.i < V.list.length) { vCard(); return; }
+  $("vBarFill").style.width = "100%"; $("vPlay").hidden = true; $("vDone").hidden = false;
+  $("vDone").innerHTML = `<h2>${V.ok} of ${V.list.length} richtig</h2><p class="lead">Words you missed cool down and come back sooner; words you got right warm up.</p>
+    <div class="card vlist">${V.res.map(r => `<div><span lang="de">${esc(r.w)}</span><span>${esc(enOf(r.w))} ${r.ok ? "✓" : "✗"}</span></div>`).join("")}</div>
+    <div class="links"><button class="send" id="vAgain">Another round</button><button class="ghost" id="vHome">Home</button></div>`;
+  $("vAgain").onclick = startVocab; $("vHome").onclick = () => show("home");
+}
+$("vMic").onclick = () => {
+  unlockAudio(); if (!V) return;
+  if (vListening) { try { vrec.stop(); } catch {} return; }
+  if (!SR) { setVPhase("Type your answer", "Speech input needs Chrome."); return; }
+  if (V.done && !$("vRes").classList.contains("no")) return;
+  try { speechSynthesis.cancel(); } catch {}
+  const retry = V.done; let got = false;
+  vrec = new SR(); vrec.lang = "de-DE"; vrec.interimResults = false; vrec.maxAlternatives = 5;
+  vrec.onresult = e => { got = true; const alts = [...e.results[0]].map(a => a.transcript);
+    if (retry) { const ok = alts.some(a => matches(a, V.list[V.i])); setVPhase(ok ? "Jetzt richtig!" : "Not quite yet", ok ? "" : `Heard “${alts[0]}”`); if (ok) speak(V.list[V.i]); }
+    else vJudge(alts); };
+  vrec.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") setVPhase("Microphone blocked", "Allow the microphone for this site in Chrome."); };
+  vrec.onend = () => { vListening = false; $("vMic").classList.remove("listening"); if (!got && !V.done) setVPhase("Didn't catch that", "Tap the mic and try again, or type it."); };
+  try { vrec.start(); vListening = true; $("vMic").classList.add("listening"); setVPhase("Ich höre zu…", "Say the German word."); } catch { setVPhase("Couldn't start the mic", "Tap again."); }
+};
+$("vCheck").onclick = () => { const t = $("vType").value.trim(); if (t) vJudge([t]); };
+$("vType").onkeydown = e => { if (e.key === "Enter") $("vCheck").click(); };
+$("vShow").onclick = () => vResult(false, "");
+$("vNext").onclick = vNext;
+$("vocabBtn").onclick = () => { if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startVocab(); };
+$("drillCold").onclick = () => { if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startVocab(); };
+
 /* ---------- tap a word for its meaning ---------- */
 const norm = w => String(w).toLowerCase().replace(/[^\p{L}'’-]/gu, "");
 function glossHTML(text, gl){
-  const map = {}; (Array.isArray(gl) ? gl : []).forEach(g => { if (g && g.w) map[norm(g.w)] = String(g.en || ""); });
-  return String(text ?? "").split(/(\p{L}[\p{L}'’-]*)/u).map((part, i) => i % 2
-    ? `<span class="wd" data-en="${esc(map[norm(part)] || "")}">${esc(part)}</span>` : esc(part)).join("");
+  const map = {}; (Array.isArray(gl) ? gl : []).forEach(g => { if (g && g.w) map[norm(g.w)] = g; });
+  return String(text ?? "").split(/(\p{L}[\p{L}'’-]*)/u).map((part, i) => { if (!(i % 2)) return esc(part); const g = map[norm(part)] || {};
+    return `<span class="wd" data-en="${esc(g.en || "")}" data-base="${esc(g.base || part)}">${esc(part)}</span>`; }).join("");
 }
 const glossCache = {};
 function hidePop(){ $("pop").hidden = true; document.querySelectorAll(".wd.sel").forEach(w => w.classList.remove("sel")); }
@@ -730,6 +952,7 @@ document.addEventListener("click", async e => {
   if (!el) { hidePop(); return; }
   hidePop(); el.classList.add("sel");
   const word = el.textContent, key = norm(word);
+  if (el.closest(".t")) { const entry = entryFor(el.dataset.base) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
   let en = el.dataset.en || glossCache[key];
   if (en) { placePop(el, word, en); return; }
   placePop(el, word, "…");
