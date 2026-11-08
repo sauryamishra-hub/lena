@@ -497,7 +497,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.8.0";
+const VERSION = "1.8.1";
 // Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCIo4UhRe9WhVGKg1jg9B8GYj7nWO5M7j0",
@@ -766,12 +766,12 @@ async function pickModel(){
   persist("model"); return S.model;
 }
 function claudeHeaders(){ return { "x-api-key": S.key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true", "content-type": "application/json" }; }
-async function callLLM(system, messages, signal){
+async function callLLM(system, messages, signal, maxTokens = 1500){
   if (S.provider === "gemini") {
     const body = JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
-      generationConfig: { temperature: 0.8, responseMimeType: "application/json", maxOutputTokens: 1500 }
+      generationConfig: { temperature: 0.8, responseMimeType: "application/json", maxOutputTokens: maxTokens }
     });
     const chain = [...new Set([GEMINI_CHAIN.includes(S.model) ? S.model : GEMINI_CHAIN[0], ...GEMINI_CHAIN])];
     let lastErr = "Google's free servers are busy right now. Try again in a minute.";
@@ -801,7 +801,7 @@ async function callLLM(system, messages, signal){
     const model = await pickModel();
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", signal, headers: claudeHeaders(),
-      body: JSON.stringify({ model, max_tokens: 800, system, messages })
+      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages })
     });
     if (res.status === 404) { S.model = ""; persist("model"); }
     if (!res.ok) throw new Error(await friendlyHttpError(res));
@@ -1237,8 +1237,8 @@ async function loadNews(force){
     if (!all.length) throw new Error("No news could be loaded right now.");
     const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary of the harder words in your German (dictionary form in "base").
 Reply ONLY with JSON: {"items":[{"id": number, "title_de": "...", "brief_de": "...", "en": "...", "glossary": [{"w": "word as written", "en": "meaning", "base": "dictionary form"}]}]}`;
-    const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }]));
-    const items = (data.items || []).map(it => { const o = all[+it.id]; return o ? { ...it, region: o.region, url: o.url, src: o.src } : null; }).filter(Boolean);
+    const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }], null, 6000));
+    const items = (Array.isArray(data) ? data : (data.items || [])).map(it => { const o = all[+it.id]; return o ? { ...it, region: o.region, url: o.url, src: o.src } : null; }).filter(Boolean);
     if (!items.length) throw new Error("Lena couldn't rewrite the news. Try Refresh.");
     const res = { items, at: Date.now() }; store.set(key, res); renderNews(res);
   } catch (e) { $("newsBody").innerHTML = `<p class="err">${esc(e.message || "Couldn't load the news. Try Refresh.")}</p>`; }
@@ -1309,7 +1309,7 @@ document.addEventListener("click", async e => {
   if (!el) { hidePop(); return; }
   hidePop(); el.classList.add("sel");
   const word = el.textContent, key = norm(word);
-  if (el.closest(".t, .nitem")) { const entry = entryFor(el.dataset.base) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
+  if (el.closest(".t, .nitem")) { const entry = entryFor(String(el.dataset.base || "").replace(/^(der|die|das) /i, "")) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
   let en = el.dataset.en || glossCache[key];
   if (en) { placePop(el, word, en); return; }
   placePop(el, word, "…");
