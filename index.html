@@ -136,6 +136,17 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .orb.speaking{background:var(--ok);color:#fff}
 .phase{min-width:0;flex:1;max-width:220px;font-size:15px;font-weight:650}
 .phase small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.wd{border-bottom:1px dotted var(--line);cursor:pointer;border-radius:3px}
+.wd.sel{background:var(--accent-soft);border-bottom-color:var(--accent)}
+.u .wd{border-bottom-color:transparent}
+.pop{position:fixed;z-index:50;background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 12px;font-size:16px;max-width:240px;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none}
+.pop b{display:block;font-size:12px;font-weight:600;opacity:.7;letter-spacing:.02em}
+.gate-logo{width:112px;height:112px;border-radius:26px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.gbtn{display:flex;align-items:center;gap:10px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:12px 20px;font-weight:700;font-size:16px}
+.acct{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.acct span{flex:1;min-width:0;overflow-wrap:anywhere}
+.invite-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;overflow-wrap:anywhere}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -150,6 +161,16 @@ p.lead{color:var(--muted);margin:0 0 16px}
     <button class="ghost" id="setBtn">Settings</button>
     <button class="switch" id="advBtn" aria-pressed="false"><i></i>Advanced</button>
   </header>
+
+  <main class="pad center" id="gate" hidden>
+    <img class="gate-logo" src="icon-512.png" alt="">
+    <p class="hello">Lena</p>
+    <p class="sub-en" id="gateMsg">Loading…</p>
+    <button class="gbtn" id="signInBtn" hidden>
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      Sign in with Google</button>
+    <button class="ghost" id="switchBtn" hidden>Use another account</button>
+  </main>
 
   <main class="pad center" id="simple" hidden>
     <p class="hello" lang="de">Hallo! Ich bin Lena.</p>
@@ -215,7 +236,8 @@ p.lead{color:var(--muted);margin:0 0 16px}
 
   <main class="scroll pad" id="settings" hidden>
     <h2>Settings</h2>
-    <p class="lead">Everything here stays on this phone.</p>
+    <div class="acct" id="acctBox" hidden><span id="acctName"></span><button class="ghost" id="signOutBtn">Sign out</button></div>
+    <p class="lead" id="setLead">Everything here stays on this phone.</p>
     <div class="field">
       <label for="provider">Tutor brain</label>
       <select id="provider">
@@ -249,8 +271,15 @@ p.lead{color:var(--muted);margin:0 0 16px}
     <label class="toggle"><input type="checkbox" id="autoSpeak"> Read Lena's replies aloud</label>
     <label class="toggle"><input type="checkbox" id="autoSend"> Send automatically when I stop speaking</label>
     <div class="links"><button class="ghost" id="voiceTest">Test voice</button></div>
+    <div id="inviteBox" hidden style="margin-top:32px">
+      <h2>Invite friends</h2>
+      <p class="lead">Add the Gmail address a friend will sign in with. Share the app link and your API key with them yourself.</p>
+      <div class="addrow" style="margin:0"><input type="text" id="inviteInput" placeholder="friend@gmail.com" autocomplete="off" inputmode="email"><button class="send" id="inviteBtn">Invite</button></div>
+      <div class="invite-list" id="inviteList"></div>
+    </div>
   </main>
 </div>
+<div class="pop" id="pop" hidden></div>
 
 <script>
 (() => {
@@ -267,7 +296,10 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
+// Sign-in (Firebase). While FIREBASE_CONFIG is null the app runs without accounts, saving on this phone only.
+const FIREBASE_CONFIG = null;
+const ADMIN_EMAIL = "";
 const $ = id => document.getElementById(id);
 $("ver").textContent = "v" + VERSION;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -285,12 +317,15 @@ const S = {
   hands: store.get("hands",false), model: store.get("model",""), adv: store.get("adv",false),
   added: store.get("added",[]), mistakes: store.get("mistakes",[]), days: store.get("days",[]), sessions: store.get("sessions",0), recentTopics: store.get("recentTopics",[])
 };
-const persist = k => store.set(k, S[k]);
+const SYNCED = ["added","mistakes","days","sessions","recentTopics","key","provider","level","rate","autoSpeak","autoSend","adv"];
+let userRef = null, syncTimer = null;
+const persist = k => { store.set(k, S[k]); if (userRef && SYNCED.includes(k)) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } };
+function syncNow(){ if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k]); d.updatedAt = Date.now(); userRef.set(d, { merge: true }).catch(() => {}); }
 const allWords = () => [...new Set([...BASE_WORDS, ...S.added])];
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
 /* ---------- views ---------- */
-const VIEWS = ["simple","home","chat","words","summary","settings"];
+const VIEWS = ["gate","simple","home","chat","words","summary","settings"];
 let current = "home";
 function show(v, title){
   if (v === "home" && !S.adv) v = "simple";
@@ -299,7 +334,8 @@ function show(v, title){
   const isHome = v === "home" || v === "simple";
   $("composer").hidden = v !== "chat";
   $("simpleBar").hidden = S.adv; $("advBar").hidden = !S.adv;
-  $("backBtn").hidden = isHome;
+  $("backBtn").hidden = isHome || v === "gate";
+  hidePop();
   $("endBtn").hidden = v !== "chat";
   $("setBtn").hidden = !(S.adv && v === "home");
   $("advBtn").hidden = !isHome;
@@ -422,8 +458,10 @@ CHECK THE LEARNER'S LATEST MESSAGE
 - Real error (wrong word, grammar, word order, article, verb ending) → correction = {"corrected": fixed sentence, "note": very short English explanation}.
 - Fine → correction = null. Be encouraging, never lecture.
 
+GLOSSARY: for EVERY word in reply_de, give its English meaning as used in this sentence (so the learner can tap any word).
+
 Reply with ONLY JSON, no markdown:
-{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}]}`;
+{"correction": null, "reply_de": "...", "reply_en": "English translation", "new_words": [{"de": "...", "en": "..."}], "glossary": [{"w": "word exactly as written in reply_de", "en": "meaning"}]}`;
 }
 function parseJSON(text){
   if (!text) throw new Error("Empty answer");
@@ -525,7 +563,7 @@ function afterSpeak(){
 function tutorBubble(d){
   const el = document.createElement("div"); el.className = "msg t";
   const nw = (d.new_words || []).filter(w => w && w.de);
-  el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${esc(d.reply_de)}</div><div class="en-text" hidden>${esc(d.reply_en)}</div>
+  el.innerHTML = `<div class="bub"><div class="de-text" lang="de">${glossHTML(d.reply_de, d.glossary)}</div><div class="en-text" hidden>${esc(d.reply_en)}</div>
     ${nw.length ? `<div class="new">${nw.map(w => `<span lang="de">${esc(w.de)} <i>${esc(w.en)}</i></span>`).join("")}</div>` : ""}
     <div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="slow">Slow</button><button class="chip" data-a="en">English</button></div></div>`;
   el.querySelector(".tools").onclick = e => {
@@ -590,8 +628,8 @@ $("hintBtn").onclick = async () => {
   busy = true;
   const box = document.createElement("div"); box.className = "hintbox"; box.innerHTML = `<span class="typing">Finding an easy answer…</span>`; msgs.appendChild(box); scrollDown();
   try {
-    const h = parseJSON(await callLLM(systemPrompt(), history('(The learner tapped "Help me answer". Do NOT continue the conversation. Suggest one short, easy reply the learner could say next, using known words. Reply ONLY with JSON: {"de": "...", "en": "..."})')));
-    box.innerHTML = `<div class="label" style="margin-bottom:4px">You could say</div><div class="de-text" lang="de">${esc(h.de)}</div><div class="en-text">${esc(h.en)}</div><div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="use">Use this</button></div>`;
+    const h = parseJSON(await callLLM(systemPrompt(), history('(The learner tapped "Help me answer". Do NOT continue the conversation. Suggest one short, easy reply the learner could say next, using known words. Reply ONLY with JSON: {"de": "...", "en": "...", "glossary": [{"w": "each word of de", "en": "meaning"}]})')));
+    box.innerHTML = `<div class="label" style="margin-bottom:4px">You could say</div><div class="de-text" lang="de">${glossHTML(h.de, h.glossary)}</div><div class="en-text">${esc(h.en)}</div><div class="tools"><button class="chip" data-a="play">Play</button><button class="chip" data-a="use">Use this</button></div>`;
     box.querySelector(".tools").onclick = e => { const a = e.target.dataset.a; if (a === "play") speak(h.de, Math.max(0.5, S.rate - 0.2)); if (a === "use") { $("input").value = h.de; grow(); } };
   } catch (e) { box.innerHTML = `<span class="err">${esc(e.message)}</span>`; }
   finally { busy = false; scrollDown(); }
@@ -646,7 +684,7 @@ function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
   $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("testOut").textContent = "";
-  renderVoiceList();
+  renderVoiceList(); renderAccount();
 }
 $("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
 $("apiKey").onchange = () => { S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model"); };
@@ -664,8 +702,121 @@ $("testBtn").onclick = async () => {
   catch (e) { $("testOut").textContent = e.message; }
 };
 
+/* ---------- tap a word for its meaning ---------- */
+const norm = w => String(w).toLowerCase().replace(/[^\p{L}'’-]/gu, "");
+function glossHTML(text, gl){
+  const map = {}; (Array.isArray(gl) ? gl : []).forEach(g => { if (g && g.w) map[norm(g.w)] = String(g.en || ""); });
+  return String(text ?? "").split(/(\p{L}[\p{L}'’-]*)/u).map((part, i) => i % 2
+    ? `<span class="wd" data-en="${esc(map[norm(part)] || "")}">${esc(part)}</span>` : esc(part)).join("");
+}
+const glossCache = {};
+function hidePop(){ $("pop").hidden = true; document.querySelectorAll(".wd.sel").forEach(w => w.classList.remove("sel")); }
+function placePop(el, word, en){
+  const p = $("pop"); p.innerHTML = `<b lang="de">${esc(word)}</b>${esc(en)}`; p.hidden = false;
+  const r = el.getBoundingClientRect(), pw = p.offsetWidth, ph = p.offsetHeight;
+  let left = Math.min(Math.max(8, r.left + r.width / 2 - pw / 2), innerWidth - pw - 8);
+  let top = r.top - ph - 8; if (top < 8) top = r.bottom + 8;
+  p.style.left = left + "px"; p.style.top = top + "px";
+}
+document.addEventListener("click", async e => {
+  const el = e.target.closest(".wd");
+  if (!el) { hidePop(); return; }
+  hidePop(); el.classList.add("sel");
+  const word = el.textContent, key = norm(word);
+  let en = el.dataset.en || glossCache[key];
+  if (en) { placePop(el, word, en); return; }
+  placePop(el, word, "…");
+  try {
+    const sentence = el.closest(".de-text")?.textContent || word;
+    const j = parseJSON(await callLLM('You translate one German word for a beginner. Reply ONLY JSON: {"en": "short English meaning as used in the sentence"}', [{ role: "user", content: `Word: ${word}\nSentence: ${sentence}` }]));
+    en = String(j.en || "?"); glossCache[key] = en; el.dataset.en = en;
+    if (el.classList.contains("sel")) placePop(el, word, en);
+  } catch { if (el.classList.contains("sel")) placePop(el, word, "Couldn't look this up"); }
+});
+$("chat").addEventListener("scroll", hidePop, { passive: true });
+
+/* ---------- accounts (Google sign-in, invite list, progress saved to account) ---------- */
+let fbAuth = null, fbDb = null, me = null;
+const isAdmin = () => !!me && !!ADMIN_EMAIL && (me.email || "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+function gate(msg, { signIn = false, other = false } = {}){
+  $("gateMsg").textContent = msg; $("signInBtn").hidden = !signIn; $("switchBtn").hidden = !other; show("gate");
+}
+async function boot(){
+  if (!FIREBASE_CONFIG) { show("home"); return; }
+  gate("Loading…");
+  try {
+    const base = "https://www.gstatic.com/firebasejs/10.14.1/";
+    await loadScript(base + "firebase-app-compat.js");
+    await Promise.all([loadScript(base + "firebase-auth-compat.js"), loadScript(base + "firebase-firestore-compat.js")]);
+    firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth(); fbDb = firebase.firestore();
+    fbAuth.getRedirectResult().catch(() => {});
+    fbAuth.onAuthStateChanged(onUser);
+  } catch { gate("Couldn't load sign-in. Check your internet and reopen Lena."); }
+}
+async function onUser(u){
+  me = u; userRef = null;
+  if (!u) { gate("Sign in to start talking German.", { signIn: true }); return; }
+  gate("Checking your invite…");
+  const ref = fbDb.collection("users").doc(u.uid);
+  try {
+    const snap = await ref.get();
+    if (snap.exists) {
+      const d = snap.data();
+      SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } });
+    }
+    userRef = ref;
+    if (!snap.exists || (!snap.data().key && S.key)) syncNow();
+    show("home");
+  } catch (e) {
+    if (e && e.code === "permission-denied") gate(`${u.email} isn't on Lena's invite list yet. Ask Saurya to invite this address.`, { other: true });
+    else gate("Couldn't reach your account. Check your internet and try again.", { other: true });
+  }
+}
+$("signInBtn").onclick = async () => {
+  const provider = new firebase.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: "select_account" });
+  try { await fbAuth.signInWithPopup(provider); }
+  catch (e) {
+    if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) fbAuth.signInWithRedirect(provider);
+    else if (e && e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") $("gateMsg").textContent = "Sign-in didn't work: " + (e.message || e.code);
+  }
+};
+async function signOut(){ stopAll(); clearTimeout(syncTimer); if (userRef) syncNow(); userRef = null; try { await fbAuth.signOut(); } catch {} }
+$("switchBtn").onclick = signOut;
+$("signOutBtn").onclick = signOut;
+
+function renderAccount(){
+  const signed = !!(fbAuth && me);
+  $("acctBox").hidden = !signed;
+  $("acctName").textContent = signed ? "Signed in as " + me.email : "";
+  $("setLead").textContent = signed ? "Your words, mistakes, streak and key are saved to your account." : "Everything here stays on this phone.";
+  $("inviteBox").hidden = !isAdmin();
+  if (isAdmin()) loadInvites();
+}
+async function loadInvites(){
+  try {
+    const qs = await fbDb.collection("invites").get();
+    $("inviteList").innerHTML = qs.docs.length ? qs.docs.map(d => `<div><span>${esc(d.id)}</span><button class="chip" data-email="${esc(d.id)}">Remove</button></div>`).join("") : `<p class="lead" style="margin:0">No friends invited yet.</p>`;
+  } catch { $("inviteList").textContent = "Couldn't load the invite list."; }
+}
+$("inviteBtn").onclick = async () => {
+  const email = $("inviteInput").value.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("inviteInput").focus(); return; }
+  $("inviteBtn").disabled = true;
+  try { await fbDb.collection("invites").doc(email).set({ invitedAt: Date.now(), by: me.email }); $("inviteInput").value = ""; await loadInvites(); }
+  catch { $("inviteList").insertAdjacentHTML("afterbegin", `<p class="err">Couldn't add ${esc(email)}. Try again.</p>`); }
+  finally { $("inviteBtn").disabled = false; }
+};
+$("inviteList").onclick = async e => {
+  const b = e.target.closest("[data-email]"); if (!b) return;
+  if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Tap again to remove"; return; }
+  try { await fbDb.collection("invites").doc(b.dataset.email).delete(); } catch {}
+  loadInvites();
+};
+
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-show("home");
+boot();
 })();
 </script>
 </body>
