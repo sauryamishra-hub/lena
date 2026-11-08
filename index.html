@@ -285,6 +285,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .bw span{font-weight:600;font-size:15px}
 .bw i{font-family:var(--f-en);color:var(--muted);font-size:13px}
 .bw:active{background:var(--gold-soft)}
+.hint-en{font-family:var(--f-en);font-style:italic;color:var(--muted);font-size:.9em}
 @media (max-width:420px){.bar .ver{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -538,7 +539,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.9.2";
+const VERSION = "1.9.3";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -686,7 +687,7 @@ function speak(text, rate, onEnd){
   if (!("speechSynthesis" in window) || !text) { onEnd && onEnd(); return; }
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(String(text).replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " "));
     u.lang = "de-DE"; u.rate = rate || S.rate;
     const v = germanVoice(); if (v) u.voice = v;
     let done = false; const fin = () => { if (!done) { done = true; onEnd && onEnd(); } };
@@ -770,7 +771,9 @@ HOW TO REPLY
 - Introduce at most 2 new words per reply and list them in new_words (nouns with der/die/das).
 - Usually end with one easy question so the learner has something to answer.
 - Share a little about yourself too, so it feels like a real conversation, not an interview.
-- If the learner uses English (or mixes), reply in German and give them the German version in correction.
+- If the learner writes in English (or mixes in English), reply in German, and put the German way to say what THEY meant in correction.corrected (e.g. "I don't know how to say that" → "Ich weiß nicht, wie man das sagt."), with note "In German:".
+- Your German must be perfectly correct: check every verb matches its subject (ich mache, du machst, er macht…), and check articles and word order before you answer.
+- English help goes only in square brackets, e.g. [machen = to do].
 - The learner speaks through speech-to-text: ignore capitalisation and punctuation, and never correct those.
 
 CHECK THE LEARNER'S LATEST MESSAGE
@@ -833,7 +836,7 @@ async function callLLM(system, messages, signal, maxTokens = 1500){
       generationConfig: { temperature: 0.8, responseMimeType: "application/json", maxOutputTokens: maxTokens }
     });
     const chain = GEMINI_CHAIN;
-    const limit = maxTokens > 2000 ? 45000 : 15000;
+    const limit = maxTokens > 2000 ? 45000 : 10000;
     let lastErr = "Google's free servers are busy right now. Try again in a minute.";
     for (const model of chain) {
       const to = withTimeout(signal, limit);
@@ -871,7 +874,12 @@ async function callLLM(system, messages, signal, maxTokens = 1500){
   }
 }
 function history(extra){
-  const msgs = [{ role: "user", content: "(Start the conversation now with a short, friendly opening and an easy question. correction must be null.)" }];
+  const open = session && session.mode === "story"
+    ? "(Start the story now: one short line about where it comes from, then the first part of the story, then one easy question. correction must be null.)"
+    : session && session.mode === "scene"
+    ? "(Start the role-play now, in your role, with one short line and an easy question. correction must be null.)"
+    : "(Start the conversation now with a short, friendly opening and an easy question. correction must be null.)";
+  const msgs = [{ role: "user", content: open }];
   turns.slice(-30).forEach(t => msgs.push(t));
   if (msgs.length > 1 && msgs[1].role === "user") msgs.splice(1, 0, { role: "assistant", content: "Hallo!" });
   if (extra) msgs.push({ role: "user", content: extra });
@@ -1314,9 +1322,9 @@ async function loadNews(force){
     all = [...src.world.map(x => ({ ...x, region: "world" })), ...src.india.map(x => ({ ...x, region: "india" }))];
     if (!all.length) throw new Error("Couldn't reach the news sources (tagesschau, DW). Check your internet and tap Refresh.");
     renderRaw(all, "Lena is rewriting these in simple German…");
-    const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary of the harder words in your German (dictionary form in "base").
+    const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary with EVERY word of your German headline and brief (meaning as used, dictionary form in "base"), so the learner can tap any word.
 Reply ONLY with JSON: {"items":[{"id": number, "title_de": "...", "brief_de": "...", "en": "...", "glossary": [{"w": "word as written", "en": "meaning", "base": "dictionary form"}]}]}`;
-    const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }], null, 6000));
+    const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }], null, 8000));
     const items = (Array.isArray(data) ? data : (data.items || [])).map(it => { const o = all[+it.id]; return o ? { ...it, region: o.region, url: o.url, src: o.src } : null; }).filter(Boolean);
     if (!items.length) throw new Error("Lena's answer came back empty.");
     const res = { items, at: Date.now() }; store.set(key, res); renderNews(res);
@@ -1393,9 +1401,13 @@ function maybeCoach(){
 const norm = w => String(w).toLowerCase().replace(/[^\p{L}'’-]/gu, "");
 function glossHTML(text, gl){
   const map = {}; (Array.isArray(gl) ? gl : []).forEach(g => { if (g && g.w) map[norm(g.w)] = g; });
-  return String(text ?? "").split(/(\p{L}[\p{L}'’-]*)/u).map((part, i) => { if (!(i % 2)) return esc(part); const g = map[norm(part)] || {};
-    return `<span class="wd" data-en="${esc(g.en || "")}" data-base="${esc(g.base || part)}">${esc(part)}</span>`; }).join("");
+  // English help in [brackets] is shown quietly and isn't tappable; every German word is.
+  return String(text ?? "").split(/(\[[^\]]*\])/).map((chunk, j) => j % 2 ? `<span class="hint-en">${esc(chunk)}</span>` :
+    chunk.split(/(\p{L}[\p{L}'’-]*)/u).map((part, i) => { if (!(i % 2)) return esc(part); const g = map[norm(part)] || {};
+      return `<span class="wd" data-en="${esc(g.en || localMeaning(part))}" data-base="${esc(g.base || part)}">${esc(part)}</span>`; }).join("")).join("");
 }
+// Meanings we already have on the phone (word bank, your list), so most taps need no AI call.
+function localMeaning(w){ const e = entryFor(w); if (e && enOf(e)) return enOf(e); const b = bankOf(w); return b ? b.en : ""; }
 const glossCache = {};
 function hidePop(){ $("pop").hidden = true; document.querySelectorAll(".wd.sel").forEach(w => w.classList.remove("sel")); }
 function placePop(el, word, en){
