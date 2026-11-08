@@ -43,6 +43,7 @@
   color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
+html{background:var(--bg)}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
@@ -232,12 +233,35 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .invite-list{display:flex;flex-direction:column}
 .invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--soft-line);overflow-wrap:anywhere}
 .toggle{display:none}
+@keyframes vtFade{from{opacity:0}to{opacity:1}}
+@keyframes vtRight{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
+@keyframes vtLeft{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:none}}
+@keyframes vtUp{from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:none}}
+.vt-fade{animation:vtFade .22s ease-out}
+.vt-right{animation:vtRight .26s cubic-bezier(.2,.8,.2,1)}
+.vt-left{animation:vtLeft .26s cubic-bezier(.2,.8,.2,1)}
+.vt-up{animation:vtUp .28s cubic-bezier(.2,.8,.2,1)}
+.coach{position:fixed;inset:0;z-index:40;background:rgba(12,12,14,.86);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);color:#fff;display:grid;grid-template-rows:1fr auto;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:vtFade .3s ease-out}
+.coach.out{animation:vtFade .3s ease-in reverse forwards}
+.coach .mid{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.coach .tip{display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:16px;text-align:center;max-width:42%}
+.coach .tip small{font-weight:400;font-size:13px;opacity:.85}
+.coach .ar{font-size:44px;line-height:1;color:var(--gold)}
+.coach .l .ar{animation:nudgeL 1s ease-in-out infinite} .coach .r .ar{animation:nudgeR 1s ease-in-out infinite} .coach .u .ar{animation:nudgeU 1s ease-in-out infinite}
+@keyframes nudgeL{50%{transform:translateX(-10px)}} @keyframes nudgeR{50%{transform:translateX(10px)}} @keyframes nudgeU{50%{transform:translateY(-10px)}}
+.coach .u{margin:0 auto 18vh;max-width:70%}
+.coach .bar4{height:3px;background:rgba(255,255,255,.25);margin-top:16px;overflow:hidden}
+.coach .bar4 i{display:block;height:100%;background:var(--gold);animation:drain 4s linear forwards}
+@keyframes drain{from{width:100%}to{width:0}}
 .seg{display:flex;border:var(--bw) solid var(--line)}
 .seg button{border:0;background:transparent;padding:7px 12px;font-size:14px;font-weight:600;color:var(--muted)}
 .seg button + button{border-left:1px solid var(--soft-line)}
 .seg button.on{background:var(--ink);color:var(--bg)}
-.newshead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.newshead .lead{margin:0 0 6px}
+.newshead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--soft-line)}
+.newsdate{margin:0;font-size:18px;font-weight:700}
+.newshead .ghost{flex:none}
+.nitem.raw h3{font-weight:600}
+.nstatus{font-size:13px;color:var(--muted);margin:0 0 12px}
 .nsec{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted)}
 .nsec::after{content:"";flex:1;height:2px;background:var(--line)}
 .nitem{background:var(--surface);border:var(--bw) solid var(--line);padding:14px 14px 12px;margin-bottom:12px;position:relative}
@@ -371,8 +395,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
   <main class="scroll pad" id="summary" hidden></main>
 
   <main class="scroll pad" id="news" hidden>
-    <div class="newshead"><p class="lead" id="newsDate" style="font-weight:600;color:var(--ink)"></p><button class="ghost" id="newsRefresh">Refresh</button></div>
-    <p class="hint" style="margin:-6px 0 14px">Today's news, rewritten in simple German for your level. Tap any word for its meaning.</p>
+    <div class="newshead"><div><p class="newsdate" id="newsDate"></p><p class="hint" style="margin:4px 0 0">Today's news in simple German for your level. Tap any word for its meaning.</p></div><button class="ghost" id="newsRefresh">Refresh</button></div>
     <div id="newsBody"></div>
   </main>
 
@@ -515,7 +538,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "1.8.2";
+const VERSION = "1.9.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -614,6 +637,14 @@ function show(v, title){
   $("advBtn").classList.toggle("on", S.adv); $("advBtn").setAttribute("aria-pressed", String(S.adv));
   $("title").textContent = title || "Lena";
   if (isHome) renderHome();
+  animateIn($(v), v === "chat" ? $("composer") : null);
+}
+// Screens slide in from the side you swiped toward; everything else fades in.
+let navDir = "fade";
+function animateIn(...els){
+  const cls = "vt-" + navDir; navDir = "fade";
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  els.filter(Boolean).forEach(el => { el.classList.remove("vt-fade", "vt-right", "vt-left", "vt-up"); void el.offsetWidth; el.classList.add(cls); });
 }
 $("advBtn").onclick = () => { S.adv = !S.adv; persist("adv"); show("home"); };
 $("goBtn").onclick = () => { unlockAudio(); if (!S.key) { renderSettings(); show("settings", "Settings"); return; } startChat({ title: "Einfach reden", mode: "free", text: pickTopic() }); };
@@ -1259,19 +1290,31 @@ async function loadNews(force){
   if (cached && !force) { renderNews(cached); return; }
   if (newsBusy) return;
   if (!S.key) { $("newsBody").innerHTML = `<p class="lead">Lena needs your AI key to rewrite the news. Add it in Settings.</p>`; return; }
-  newsBusy = true; $("newsBody").innerHTML = `<p class="lead">Lena is reading today's news…</p>`;
+  newsBusy = true; $("newsBody").innerHTML = `<p class="nstatus">Fetching today's headlines…</p>`;
+  let all = [];
   try {
     const src = await gatherNews();
-    const all = [...src.world.map(x => ({ ...x, region: "world" })), ...src.india.map(x => ({ ...x, region: "india" }))];
-    if (!all.length) throw new Error("No news could be loaded right now.");
+    all = [...src.world.map(x => ({ ...x, region: "world" })), ...src.india.map(x => ({ ...x, region: "india" }))];
+    if (!all.length) throw new Error("Couldn't reach the news sources (tagesschau, DW). Check your internet and tap Refresh.");
+    renderRaw(all, "Lena is rewriting these in simple German…");
     const prompt = `You rewrite news for a German learner at level ${S.level} (${LEVEL_TEXT[S.level] || LEVEL_TEXT.A1}). For each item, write a short German headline and a brief of 2–3 short, simple German sentences that keep the facts correct. Use common words; explain anything unusual in simple German. Also give an English translation of the brief, and a glossary of the harder words in your German (dictionary form in "base").
 Reply ONLY with JSON: {"items":[{"id": number, "title_de": "...", "brief_de": "...", "en": "...", "glossary": [{"w": "word as written", "en": "meaning", "base": "dictionary form"}]}]}`;
     const data = parseJSON(await callLLM(prompt, [{ role: "user", content: JSON.stringify(all.map((x, id) => ({ id, region: x.region, title: x.title, text: x.text }))) }], null, 6000));
     const items = (Array.isArray(data) ? data : (data.items || [])).map(it => { const o = all[+it.id]; return o ? { ...it, region: o.region, url: o.url, src: o.src } : null; }).filter(Boolean);
-    if (!items.length) throw new Error("Lena couldn't rewrite the news. Try Refresh.");
+    if (!items.length) throw new Error("Lena's answer came back empty.");
     const res = { items, at: Date.now() }; store.set(key, res); renderNews(res);
-  } catch (e) { $("newsBody").innerHTML = `<p class="err">${esc(e.message || "Couldn't load the news. Try Refresh.")}</p>`; }
+  } catch (e) {
+    const msg = e && e.message ? e.message : "Something went wrong.";
+    if (all.length) renderRaw(all, `Showing the original headlines. Lena couldn't simplify them just now (${msg}). Tap Refresh to try again.`);
+    else $("newsBody").innerHTML = `<p class="err">${esc(msg)}</p>`;
+  }
   finally { newsBusy = false; }
+}
+function renderRaw(all, note){
+  const sec = (region, label) => { const its = all.filter(i => i.region === region); if (!its.length) return "";
+    return `<div class="nsec">${label}</div>` + its.map(it => `<article class="nitem raw ${region}"><h3 class="de-text" lang="${/English/.test(it.src) ? "en" : "de"}">${/English/.test(it.src) ? esc(it.title) : glossHTML(it.title, [])}</h3>
+      <div class="nsrc">Source: ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.src)} ↗</a>` : esc(it.src)}</div></article>`).join(""); };
+  $("newsBody").innerHTML = `<p class="nstatus">${esc(note)}</p>` + sec("world", "Welt") + sec("india", "Indien");
 }
 function renderNews(res){
   const sec = (region, label) => { const its = res.items.filter(i => i.region === region); if (!its.length) return "";
@@ -1294,8 +1337,8 @@ $("newsBody").addEventListener("click", e => {
 function openNews(){ stopAll(); show("news", "Nachrichten"); loadNews(false); }
 $("newsRefresh").onclick = () => loadNews(true);
 $("newsBtn").onclick = openNews;
-$("toNews").onclick = openNews;
-$("toAdv").onclick = () => { S.adv = true; persist("adv"); show("home"); };
+$("toNews").onclick = () => { navDir = "left"; openNews(); };
+$("toAdv").onclick = () => { navDir = "right"; S.adv = true; persist("adv"); show("home"); };
 
 /* ---------- swipes: left → Advanced, right → News, up → a story ---------- */
 function onSwipe(el, handlers){
@@ -1310,12 +1353,24 @@ function onSwipe(el, handlers){
   }, { passive: true });
 }
 onSwipe($("simple"), {
-  left: () => { S.adv = true; persist("adv"); show("home"); },
-  right: openNews,
-  up: () => $("storyBtn").click()
+  left: () => { navDir = "right"; S.adv = true; persist("adv"); show("home"); },
+  right: () => { navDir = "left"; openNews(); },
+  up: () => { navDir = "up"; $("storyBtn").click(); }
 });
-onSwipe($("home"), { right: () => { S.adv = false; persist("adv"); show("home"); } });
-onSwipe($("news"), { left: () => show("home") });
+onSwipe($("home"), { right: () => { navDir = "left"; S.adv = false; persist("adv"); show("home"); } });
+onSwipe($("news"), { left: () => { navDir = "right"; show("home"); } });
+
+/* ---------- a 4-second hint showing what the swipes do (first few launches) ---------- */
+function maybeCoach(){
+  const n = store.get("coachSeen", 0);
+  if (n >= 3 || current !== "simple") return;
+  store.set("coachSeen", n + 1);
+  const c = document.createElement("div"); c.className = "coach"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "How to move around");
+  c.innerHTML = `<div class="mid"><div class="tip l"><span class="ar">←</span>Nachrichten<small>swipe right</small></div><div class="tip r"><span class="ar">→</span>Advanced<small>swipe left</small></div></div>
+    <div><div class="tip u"><span class="ar">↑</span>A story<small>swipe up</small></div><div class="bar4"><i></i></div></div>`;
+  const close = () => { if (!c.isConnected) return; c.classList.add("out"); setTimeout(() => c.remove(), 300); };
+  c.onclick = close; document.body.appendChild(c); setTimeout(close, 4000);
+}
 
 /* ---------- tap a word for its meaning ---------- */
 const norm = w => String(w).toLowerCase().replace(/[^\p{L}'’-]/gu, "");
@@ -1434,6 +1489,8 @@ $("inviteList").onclick = async e => {
 };
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+let coachTried = false;
+const coachObs = setInterval(() => { if (current === "simple" && !coachTried) { coachTried = true; clearInterval(coachObs); setTimeout(maybeCoach, 600); } }, 400);
 boot();
 })();
 </script>
