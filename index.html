@@ -319,6 +319,57 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:45;background:var(--ink);color:var(--bg);padding:12px 16px;font-weight:600;font-size:15px;animation:vtUp .25s ease-out}
 .learnta{width:100%;box-sizing:border-box;border:var(--bw) solid var(--line);background:var(--surface);color:var(--ink);padding:10px 12px;font:inherit;font-size:16px;resize:vertical}
 #shotOut .card{margin-top:10px}
+/* achievements */
+.achrow{display:flex;justify-content:space-between;align-items:center;width:100%;border:var(--bw) solid var(--line);background:var(--surface);padding:12px 14px;font-weight:600;margin:0 0 14px;color:var(--ink)}
+.achrow em{font-style:normal;font-variant-numeric:tabular-nums;background:var(--gold);color:var(--gold-ink);font-size:12px;font-weight:800;padding:2px 8px}
+.ach1{position:absolute;top:26px;right:max(16px, env(safe-area-inset-right,0px));background:var(--surface);border:var(--bw) solid var(--line);padding:4px 9px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.achsec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:22px 0 10px}
+.achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.acard{position:relative;background:var(--surface);border:var(--bw) solid var(--line);padding:14px 12px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;overflow:hidden;color:var(--ink)}
+.acard::after{content:"";position:absolute;right:-1px;top:-1px;width:18px;height:18px;background:var(--gold)}
+.acard .aem{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:28px;line-height:1;background:var(--gold-soft);border:2px solid var(--line);margin-bottom:6px}
+.acard b{font-size:17px;line-height:1.15;letter-spacing:-.01em}
+.acard span{font-size:13px;color:var(--muted);line-height:1.3}
+.acard small{font-size:11px;color:var(--muted);margin-top:auto;padding-top:8px;font-weight:600;line-height:1.3}
+.acard.on{border-left:5px solid var(--accent)}
+.acard.on small.aby{color:var(--ink)}
+.acard .aprog{width:100%;height:5px;background:var(--soft-line);margin-top:auto;position:relative}
+.acard .aprog + small{padding-top:4px}
+.acard .aprog i{position:absolute;left:0;top:0;bottom:0;background:var(--cool)}
+.acard.lock{border-style:dashed;border-color:var(--soft-line)}
+.acard.lock::after,.acard.broken::after{background:var(--soft-line)}
+.acard.lock .aem,.acard.broken .aem{filter:grayscale(1);opacity:.45;background:transparent;border-color:var(--soft-line)}
+.acard.lock b{color:var(--muted)}
+.acard.broken{background:var(--bg);border-color:var(--soft-line);border-left:5px solid var(--cool)}
+.acard.broken b,.acard.broken span{color:var(--muted)}
+.acard.broken b{text-decoration:line-through;text-decoration-thickness:1.5px}
+.acard .crack{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;color:var(--muted);opacity:.7}
+.acard.broken > :not(.crack){position:relative;z-index:1}
+.acard.broken small{color:var(--ink)}
+.achpop{position:fixed;inset:0;z-index:60;background:rgba(12,12,14,.88);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));animation:vtFade .25s ease-out;overflow:hidden}
+.achpop .rays{position:absolute;left:50%;top:44%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(rgba(242,183,5,.16) 0 9deg,transparent 9deg 22.5deg);animation:achRays 18s linear infinite;pointer-events:none;-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%)}
+.achpop .kick{color:var(--gold);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;margin:0;position:relative;opacity:0;animation:achUp .4s ease-out 1.5s forwards}
+.achpop .flip{position:relative;width:min(72vw,250px);aspect-ratio:3/4;perspective:900px}
+.achpop .flipin{position:absolute;inset:0;transform-style:preserve-3d;animation:achSpin 1.6s cubic-bezier(.15,.75,.25,1) both}
+.achpop .face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden}
+.achpop .face.back{transform:rotateY(180deg);background:#111;border:3px solid #111;display:grid;place-items:center}
+.achpop .face.back::before{content:"";width:58%;aspect-ratio:1;border-radius:50%;background:var(--accent)}
+.achpop .face.back::after{content:"";position:absolute;right:14%;bottom:12%;width:22%;aspect-ratio:1;background:var(--gold)}
+.achpop .acard{height:100%;padding:22px 18px 18px;align-items:center;text-align:center;gap:6px;border-width:3px;border-left-width:3px}
+.achpop .acard::after{width:34px;height:34px}
+.achpop .acard .aem{width:96px;height:96px;font-size:54px;margin:6px 0 12px;border-width:3px}
+.achpop .acard b{font-size:26px}
+.achpop .acard span{font-size:15px}
+.achpop .acard small{font-size:12px}
+.achpop .bits{position:absolute;left:50%;top:44%;width:0;height:0;pointer-events:none}
+.achpop .bits i{position:absolute;width:12px;height:12px;left:-6px;top:-6px;opacity:0;animation:achBit 1.1s cubic-bezier(.2,.8,.3,1) 1.1s forwards}
+.achpop .bits i.c{border-radius:50%;background:var(--accent)}.achpop .bits i.s{background:var(--gold)}.achpop .bits i.t{width:0;height:0;background:none;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid #fff}
+.achpop .go{position:relative;min-width:150px;opacity:0;animation:achUp .4s ease-out 1.6s forwards}
+@keyframes achSpin{0%{transform:rotateY(-1080deg) scale(.15);opacity:0}15%{opacity:1}75%{transform:rotateY(-20deg) scale(1.06)}100%{transform:rotateY(0) scale(1)}}
+@keyframes achRays{to{transform:rotate(360deg)}}
+@keyframes achUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes achBit{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.achpop .kick,.achpop .go{opacity:1}.achpop .bits{display:none}}
 @media (max-width:420px){.bar .ver{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -349,6 +400,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="bars" aria-hidden="true"><i></i><i></i><i></i></div>
     <span class="ver1" id="ver1"></span>
     <span class="goal1" id="goal1"></span>
+    <button class="ach1" id="ach1" aria-label="Erfolge, achievements">🏆 0</button>
     <p class="hello" lang="de">Hallo!<br>Ich bin <span>Lena.</span></p>
     <button class="disc" id="goBtn" aria-label="Start talking with Lena">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
@@ -378,6 +430,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="heat" id="heatBar"></div>
     <div class="legend" id="heatLegend"></div>
     <div class="goal" id="goalBox"></div>
+    <button class="achrow" id="achBtn"><span>🏆 Erfolge · achievements</span><em id="achN">0</em></button>
     <p class="label">Situations</p>
     <div class="grid" id="scenes"></div>
     <p class="label">Geschichten · folk tales</p>
@@ -418,6 +471,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="heat" id="heatBar2"></div>
     <div class="legend" id="heatLegend2"></div>
     <div class="goal" id="goalBox2"></div>
+    <button class="achrow" id="achBtn2"><span>🏆 Erfolge · achievements</span><em id="achN2">0</em></button>
     <div class="links" style="margin:16px 0 20px"><button class="send" id="drillCold">Drill my coldest words</button></div>
     <div id="learnBox">
       <p class="label">Learned new words? (Duolingo, a class, a book)</p>
@@ -437,6 +491,12 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
   </main>
 
   <main class="scroll pad" id="summary" hidden></main>
+
+  <main class="scroll pad" id="ach" hidden>
+    <h2>Erfolge</h2>
+    <p class="lead" id="achLead"></p>
+    <div id="achList"></div>
+  </main>
 
   <main class="scroll pad" id="news" hidden>
     <div class="newshead"><div><p class="newsdate" id="newsDate"></p><p class="hint" style="margin:4px 0 0">Today's news in simple German for your level. Tap any word for its meaning.</p></div><button class="ghost" id="newsRefresh">Refresh</button></div>
@@ -552,6 +612,13 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 </div>
 <div class="pop" id="pop" hidden></div>
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="achpop" id="achPop" hidden role="dialog" aria-modal="true" aria-labelledby="achKick">
+  <div class="rays"></div>
+  <p class="kick" id="achKick">Erfolg freigeschaltet!</p>
+  <div class="flip"><div class="flipin" id="achFlip"><div class="face front" id="achFront"></div><div class="face back"></div></div></div>
+  <div class="bits" id="achBits"></div>
+  <button class="send go" id="achGo">Weiter</button>
+</div>
 
 <script src="vocab.js"></script>
 <script src="dict.js"></script>
@@ -603,7 +670,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.4.1";
+const VERSION = "2.5.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -637,15 +704,17 @@ const store = {
 const DEFAULTS = {
   provider: "gemini", key: "", level: "A1", voice: "", rate: 0.9, autoSpeak: true, autoSend: false, autoListen: false, theme: "light",
   seeded: false, recentStories: [], model: "", adv: false, added: [], mistakes: [], days: [], sessions: 0, recentTopics: [],
-  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}, newPerRound: 3
+  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}, newPerRound: 3,
+  ach: {}, achInit: false, counts: { voice: 0, stories: 0, newsDays: [], vRounds: 0, perfect: 0 }
 };
 const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
-const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests","newPerRound"];
+const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests","newPerRound","ach","achInit","counts"];
 let userRef = null, syncTimer = null;
 const WIDGET_KEYS = ["days", "stats", "added", "sessions", "level"];
 let widgetPort = null, widgetTimer = null;
+let achT = null, achReady = false;
 // Everything that matters is saved to the account (Firestore), so uninstalling or changing phones loses nothing.
-const persist = k => { store.set(k, S[k]); if (WIDGET_KEYS.includes(k)) widgetSoon(); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
+const persist = k => { store.set(k, S[k]); if (WIDGET_KEYS.includes(k)) widgetSoon(); if (["stats","days","sessions","added","counts"].includes(k)) achSoon(); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
 function syncNow(){
   if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k] === undefined ? null : S[k]);
   d.updatedAt = store.get("updatedAt", Date.now());
@@ -714,10 +783,27 @@ function nextNewWords(n = 6){
   return BANK.filter(b => !known.has(b.w.toLowerCase()) && b.lvl <= max && b.tag !== "g")
     .map(b => [b, importance(b.w) + sameArea(b.w) + (goal.has(b.w.toLowerCase()) ? 20 : 0) + Math.random() * 10]).sort((a, c) => c[1] - a[1]).slice(0, n).map(x => x[0]);
 }
-function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
+// Streak = days practised in a row. One missed day is a freeze day and is forgiven; two missed days in a row end the streak.
+function streak(){
+  const set = new Set(S.days); let n = 0, gap = 0; const d = new Date();
+  if (!set.has(today())) d.setDate(d.getDate()-1);
+  for (let i = 0; i < 400; i++) { if (set.has(dayKey(d))) { n++; gap = 0; } else if (++gap > 1) break; d.setDate(d.getDate()-1); }
+  return n;
+}
+// The longest streak in the saved history (about the last 90 days).
+function bestStreak(){
+  if (!S.days.length) return 0;
+  const set = new Set(S.days), first = [...S.days].sort()[0].split("-").map(Number);
+  const d = new Date(first[0], first[1]-1, first[2], 12), end = today();
+  let n = 0, gap = 0, best = 0;
+  for (let i = 0; i < 800 && dayKey(d) <= end; i++) { if (set.has(dayKey(d))) { n++; gap = 0; best = Math.max(best, n); } else if (++gap > 1) n = 0; d.setDate(d.getDate()+1); }
+  return best;
+}
+// True when yesterday was missed and today isn't done yet: the freeze day is in use.
+function onFreeze(){ const set = new Set(S.days), y = new Date(); y.setDate(y.getDate()-1); return streak() > 0 && !set.has(today()) && !set.has(dayKey(y)); }
 
 /* ---------- views ---------- */
-const VIEWS = ["gate","simple","home","chat","words","summary","settings","vocab","news","onboard"];
+const VIEWS = ["gate","simple","home","chat","words","summary","settings","vocab","news","onboard","ach"];
 let current = "home";
 function show(v, title){
   if (v === "home" && needsOnboarding()) v = "onboard";
@@ -734,7 +820,7 @@ function show(v, title){
   $("advBtn").hidden = !isHome;
   $("advBtn").classList.toggle("on", S.adv); $("advBtn").setAttribute("aria-pressed", String(S.adv));
   $("title").textContent = title || "Lena";
-  if (isHome) renderHome();
+  if (isHome) { renderHome(); if (!achReady) { achReady = true; achSoon(); } }
   animateIn($(v), v === "chat" ? $("composer") : null);
 }
 // Screens slide in from the side you swiped toward; everything else fades in.
@@ -784,6 +870,7 @@ function renderHome(){
   renderHeat("heatBar", "heatLegend");
   renderGoal("goalBox");
   const cg = currentGoal(); $("goal1").textContent = `Ziel ${cg.g.id} · ${cg.st.learned} / ${cg.st.total}`;
+  renderAchCount();
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
 $("scenes").onclick = e => { const b = e.target.closest(".scene"); if (b) { const s = SCENES[+b.dataset.i]; startChat({ title: s.de, mode: "scene", text: s.brief }); } };
@@ -802,7 +889,7 @@ function tellStoryPart(prefix){
   const parts = storyText(session.text) || [];
   const p = storyPart(session.part);
   const d = { reply_de: (prefix ? prefix.de + " " : "") + p[0], reply_en: (prefix ? prefix.en + " " : "") + p[1], glossary: prefix ? prefix.glossary || [] : [], new_words: prefix ? prefix.new_words || [] : [] };
-  if (session.part >= parts.length) session.done = true;
+  if (session.part >= parts.length) { if (!session.done) countUp("stories"); session.done = true; }
   session.part++;
   return d;
 }
@@ -1219,6 +1306,7 @@ function sendAudio(media){
   msgs.querySelectorAll(".hintbox").forEach(h => h.remove());
   if (retry) { retry.tEl.remove(); retry = null; }
   const el = voiceBubble(); turns.push({ role: "user", content: AUDIO_NOTE, media });
+  countUp("voice");
   ask(el, null, media);
 }
 /* ---------- an open chat is kept until Finish, so you can come back to it ---------- */
@@ -1293,6 +1381,118 @@ $("endBtn").onclick = () => {
   syncWidgetByLink();
   toast(r.mine ? `Saved · ${r.mine} message${r.mine === 1 ? "" : "s"} · ${r.fixes} correction${r.fixes === 1 ? "" : "s"}${r.words ? ` · ${r.words} new word${r.words === 1 ? "" : "s"}` : ""}` : "Chat closed");
 };
+
+/* ---------- achievements (Erfolge) ---------- */
+// Unlocks are permanent and saved to the account. Streak cards crack when the streak breaks and mend when it is reached again.
+function achCounts(){ const d = DEFAULTS.counts; if (!S.counts || typeof S.counts !== "object") S.counts = {}; Object.keys(d).forEach(k => { if (S.counts[k] === undefined) S.counts[k] = structuredClone(d[k]); }); return S.counts; }
+function countUp(k){ achCounts()[k]++; persist("counts"); }
+const learnedN = () => { const h = heatCounts(); return h.warm + h.hot; };
+const tagN = tags => allWords().filter(w => { const b = bankOf(w); return b && tags.includes(b.tag) && warmth(w) >= 40; }).length;
+const statN = f => Object.values(S.stats || {}).filter(f).length;
+const goalHave = i => { const st = goalStats(GOALS[i]); return [st.learned, Math.ceil(st.total * 0.9)]; };
+const ACH_GROUPS = ["Getting started", "Vocabulary", "Word types", "Consistency", "Exploring"];
+const ACH = [
+  { id: "hallo", g: 0, e: "👋", de: "Hallo!", en: "Finished your first chat", p: () => [S.sessions, 1] },
+  { id: "worte", g: 0, e: "🗣️", de: "Erste Worte", en: "Said a German word correctly in a chat", p: () => [statN(s => s.c > 0) ? 1 : 0, 1] },
+  { id: "mutig", g: 0, e: "🎙️", de: "Mutig", en: "Sent your first voice message", p: () => [achCounts().voice, 1] },
+  { id: "karten", g: 0, e: "🃏", de: "Kartenspieler", en: "Finished a Vokabeln round", p: () => [achCounts().vRounds, 1] },
+  { id: "keim", g: 1, e: "🌱", de: "Keimling", en: "50 warm or hot words", p: () => [learnedN(), 50] },
+  { id: "wurzeln", g: 1, e: "🌿", de: "Wurzeln", en: "150 warm or hot words", p: () => [learnedN(), 150] },
+  { id: "baum", g: 1, e: "🌳", de: "Baum", en: "300 warm or hot words", p: () => [learnedN(), 300] },
+  { id: "a1", g: 1, e: "🥉", de: "A1 geschafft", en: "Finished the A1 word goal", p: () => goalHave(0) },
+  { id: "a2", g: 1, e: "🥈", de: "A2 geschafft", en: "Finished the A2 word goal", p: () => goalHave(1) },
+  { id: "b1", g: 1, e: "🥇", de: "B1 geschafft", en: "Finished the B1 word goal", p: () => goalHave(2) },
+  { id: "riese", g: 2, e: "🦖", de: "Wortungeheuer", en: "Used a 15+ letter word correctly", p: () => [Object.entries(S.stats || {}).some(([w, s]) => s.c > 0 && w.replace(/[^a-zäöüß]/g, "").length >= 15) ? 1 : 0, 1] },
+  { id: "heiss", g: 2, e: "🔥", de: "Heißes Eisen", en: "Your first hot word", p: () => [heatCounts().hot ? 1 : 0, 1] },
+  { id: "essen", g: 2, e: "🍽️", de: "Feinschmecker", en: "25 food words warm or hot", p: () => [tagN(["f"]), 25] },
+  { id: "reise", g: 2, e: "✈️", de: "Weltenbummler", en: "25 travel and city words warm or hot", p: () => [tagN(["t", "c"]), 25] },
+  { id: "gefuehl", g: 2, e: "💬", de: "Gefühlsecht", en: "15 feelings words warm or hot", p: () => [tagN(["m"]), 15] },
+  { id: "treffer", g: 2, e: "🎯", de: "Volltreffer", en: "10 of 10 right first time in Vokabeln", p: () => [achCounts().perfect, 1] },
+  { id: "zaeh", g: 2, e: "🩹", de: "Nie aufgeben", en: "Corrected 25 words after a miss", p: () => [Object.values(S.stats || {}).reduce((a, s) => a + (s.vf || 0), 0), 25] },
+  { id: "s3", g: 3, e: "📅", de: "Dranbleiben", en: "3-day streak", streak: 3 },
+  { id: "s7", g: 3, e: "🗓️", de: "Eine Woche", en: "7-day streak", streak: 7 },
+  { id: "s30", g: 3, e: "🏆", de: "Monatsmeister", en: "30-day streak", streak: 30 },
+  { id: "chats100", g: 3, e: "💯", de: "Hundert", en: "100 chats", p: () => [S.sessions, 100] },
+  { id: "maerchen", g: 4, e: "📖", de: "Märchenfreund", en: "Heard 5 stories to the end", p: () => [achCounts().stories, 5] },
+  { id: "zeitung", g: 4, e: "📰", de: "Zeitungsleser", en: "Read the news on 10 days", p: () => [achCounts().newsDays.length, 10] }
+];
+ACH.forEach(a => { if (a.streak) a.p = () => [Math.max(bestStreak(), streak()), a.streak]; });
+const achById = id => ACH.find(a => a.id === id);
+function achSoon(){ clearTimeout(achT); achT = setTimeout(checkAchievements, 500); }
+function checkAchievements(){
+  if (!achReady) return [];
+  if (!S.ach || typeof S.ach !== "object") S.ach = {};
+  const fresh = [], cur = streak(); let changed = false;
+  ACH.forEach(a => {
+    const got = S.ach[a.id];
+    if (!got) { const [h, n] = a.p(); if (h >= n) { S.ach[a.id] = a.streak && cur < a.streak ? { at: Date.now(), broken: Date.now() } : { at: Date.now() }; fresh.push({ a, back: false }); changed = true; } }
+    else if (a.streak) {
+      if (cur < a.streak && !got.broken) { got.broken = Date.now(); changed = true; }
+      else if (cur >= a.streak && got.broken) { delete got.broken; got.back = Date.now(); fresh.push({ a, back: true }); changed = true; }
+    }
+  });
+  if (changed) persist("ach");
+  if (!S.achInit) {
+    // First run after the update: unlock what was already earned without a parade of pop-ups.
+    S.achInit = true; persist("achInit");
+    if (fresh.length) toast(`🏆 ${fresh.length} Erfolg${fresh.length === 1 ? "" : "e"} unlocked from your progress so far`);
+  } else fresh.forEach(f => achQueue.push(f));
+  renderAchCount();
+  if (current === "ach") renderAch();
+  achNextPop();
+  return fresh;
+}
+// Unlocks from the account and this phone are combined, so nothing earned is ever lost.
+function mergeAch(localAch, localCounts){
+  const a = S.ach && typeof S.ach === "object" ? S.ach : {};
+  Object.entries(localAch || {}).forEach(([id, v]) => { if (!a[id] || (v.at && v.at < a[id].at)) a[id] = { ...(a[id] || {}), ...v }; });
+  S.ach = a; const c = achCounts(), l = localCounts || {};
+  ["voice", "stories", "vRounds", "perfect"].forEach(k => c[k] = Math.max(+c[k] || 0, +l[k] || 0));
+  c.newsDays = [...new Set([...(c.newsDays || []), ...(l.newsDays || [])])].sort().slice(-60);
+  store.set("ach", S.ach); store.set("counts", S.counts);
+}
+const achWho = () => { const n = me && (me.displayName || "").trim(); return n ? n.split(/\s+/)[0] : me && me.email ? me.email.split("@")[0] : ""; };
+const achDate = t => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const CRACK = `<svg class="crack" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="bevel"><path vector-effect="non-scaling-stroke" d="M62 0 L55 14 L66 22 L50 38 L58 46 L41 63 L49 70 L36 86 L40 100"/><path vector-effect="non-scaling-stroke" d="M50 38 L34 34 L22 42 L8 39"/><path vector-effect="non-scaling-stroke" d="M41 63 L60 66 L72 78 L90 80 L100 88"/><path vector-effect="non-scaling-stroke" d="M58 46 L76 40 L84 30"/></svg>`;
+function achCard(a){
+  const got = S.ach[a.id], [h, n] = a.p(), who = achWho();
+  const by = got ? `Achieved by ${esc(who || "you")} · ${achDate(got.at)}` : "";
+  if (got && a.streak && got.broken) {
+    const cur = streak();
+    return `<div class="acard broken" data-id="${a.id}">${CRACK}<div class="aem" aria-hidden="true">${a.e}</div><b lang="de">${esc(a.de)}</b><span>${esc(a.en)}</span><small>${by}<br>Broken — practise ${a.streak - cur} more day${a.streak - cur === 1 ? "" : "s"} in a row to restore it</small></div>`;
+  }
+  if (got) return `<div class="acard on" data-id="${a.id}"><div class="aem" aria-hidden="true">${a.e}</div><b lang="de">${esc(a.de)}</b><span>${esc(a.en)}</span><small class="aby">${by}</small></div>`;
+  const have = a.streak ? streak() : Math.min(h, n);
+  return `<div class="acard lock" data-id="${a.id}"><div class="aem" aria-hidden="true">${a.e}</div><b lang="de">${esc(a.de)}</b><span>${esc(a.en)}</span><div class="aprog"><i style="width:${(Math.min(have, n) / n * 100).toFixed(1)}%"></i></div><small>${Math.min(have, n)} / ${n}</small></div>`;
+}
+function renderAchCount(){
+  const n = ACH.filter(a => S.ach && S.ach[a.id]).length;
+  [["ach1", `🏆 ${n}`], ["achN", `${n} / ${ACH.length}`], ["achN2", `${n} / ${ACH.length}`]].forEach(([id, t]) => { const el = $(id); if (el) el.textContent = t; });
+}
+function renderAch(){
+  const n = ACH.filter(a => S.ach[a.id]).length, cur = streak();
+  $("achLead").innerHTML = `${n} of ${ACH.length} unlocked. Streak: <b>${cur} day${cur === 1 ? "" : "s"}</b>.${onFreeze() ? " Yesterday was your freeze day, so practise today to keep it going." : ""} One missed day is forgiven as a freeze day; two in a row break the streak.`;
+  $("achList").innerHTML = ACH_GROUPS.map((g, i) => `<p class="achsec">${g}</p><div class="achgrid">${ACH.filter(a => a.g === i).map(achCard).join("")}</div>`).join("");
+}
+function openAch(){ stopAll(); if (achReady) checkAchievements(); renderAch(); show("ach", "Erfolge"); }
+$("achBtn").onclick = openAch; $("achBtn2").onclick = openAch; $("ach1").onclick = openAch;
+// The unlock pop-up: the card spins in, then "Weiter" goes straight back to what you were doing.
+const achQueue = [];
+function achNextPop(){
+  if (!$("achPop").hidden || !achQueue.length) return;
+  if (["gate", "onboard"].includes(current)) return;
+  const { a, back } = achQueue.shift();
+  $("achKick").textContent = back ? "Wieder da! Streak restored" : "Erfolg freigeschaltet!";
+  $("achFront").innerHTML = achCard(a);
+  const fl = $("achFlip"); fl.style.animation = "none"; void fl.offsetWidth; fl.style.animation = "";
+  $("achBits").innerHTML = Array.from({ length: 18 }, (_, i) => { const ang = i / 18 * Math.PI * 2 + Math.random() * .3, r = 140 + Math.random() * 120; return `<i class="${"cst"[i % 3]}" style="--x:${(Math.cos(ang) * r).toFixed(0)}px;--y:${(Math.sin(ang) * r).toFixed(0)}px;--r:${Math.round(Math.random() * 540 - 270)}deg"></i>`; }).join("");
+  $("achPop").hidden = false;
+  try { navigator.vibrate && navigator.vibrate([40, 60, 40]); } catch {}
+  setTimeout(() => { if (!$("achPop").hidden) $("achGo").focus(); }, 300);
+}
+function achClose(){ $("achPop").hidden = true; if (current === "ach") renderAch(); setTimeout(achNextPop, 250); }
+$("achGo").onclick = achClose;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("achPop").hidden) achClose(); });
 
 /* ---------- words ---------- */
 function addWords(list){
@@ -1610,6 +1810,7 @@ function vNext(){
   if (V.i < V.list.length) { vCard(); return; }
   $("vBarFill").style.width = "100%"; $("vPlay").hidden = true; $("vDone").hidden = false;
   const fixedN = V.res.filter(r => r.fixed).length, cg = currentGoal();
+  const ac = achCounts(); ac.vRounds++; if (V.res.length >= 10 && V.ok === V.res.length) ac.perfect++; persist("counts");
   $("vDone").innerHTML = `<h2>${V.ok} of ${V.res.length} richtig${fixedN ? ` · ${fixedN} corrected` : ""}</h2><p class="lead">Words you got right first time warm up. Words you missed cool down and come back sooner, even if you corrected them.${V.fresh ? ` ${V.fresh} new word${V.fresh === 1 ? "" : "s"} added to My words.` : ""}</p>
     <p class="lead" style="margin-top:-6px"><b>Ziel ${cg.g.id}:</b> ${cg.st.learned} of ${cg.st.total} learned · ${cg.st.started} started</p>
     <div class="card vlist">${V.res.map(r => `<div><span lang="de">${esc(r.w)}</span><span>${esc(enOf(r.w))} ${r.ok ? "✓" : r.fixed ? `<span class="vfix">corrected ✓</span>` : "✗"}</span></div>`).join("")}</div>
@@ -1811,7 +2012,7 @@ $("newsBody").addEventListener("click", e => {
   if (a === "slow") speak(it.title_de + ". " + it.brief_de, Math.max(0.5, S.rate - 0.3));
   if (a === "en") { const en = card.querySelector(".en-text"); en.hidden = !en.hidden; e.target.classList.toggle("on", !en.hidden); }
 });
-function openNews(){ stopAll(); show("news", "Nachrichten"); loadNews(false); }
+function openNews(){ stopAll(); show("news", "Nachrichten"); loadNews(false); const c = achCounts(); if (!c.newsDays.includes(today())) { c.newsDays = [...c.newsDays, today()].slice(-60); persist("counts"); } }
 $("newsRefresh").onclick = () => loadNews(true);
 $("newsBtn").onclick = openNews;
 $("toNews").onclick = () => { navDir = "left"; openNews(); };
@@ -1949,9 +2150,11 @@ async function onUser(u){
     const localUid = store.get("uid", null), localAt = store.get("updatedAt", 0);
     if (localUid !== u.uid) { if (localUid) resetLocal(); store.set("uid", u.uid); }
     const d = snap.exists ? snap.data() : null;
+    const localAch = S.ach || {}, localCounts = achCounts();
     // The account copy wins unless this phone has newer changes that never reached it.
     const takeServer = !!d && (localUid !== u.uid || (d.updatedAt || 0) >= localAt);
     if (takeServer) { SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } }); store.set("updatedAt", d.updatedAt || Date.now()); }
+    if (takeServer) mergeAch(localAch, localCounts); else if (d) mergeAch(d.ach, d.counts);
     userRef = ref;
     migratePrefs(); applyTheme(S.theme);
     seedWords();
