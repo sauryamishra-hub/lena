@@ -110,6 +110,18 @@ input[type=text],input[type=password],select,textarea{border:var(--bw) solid var
 .send{background:var(--accent);color:var(--accent-ink);border:0;border-radius:0;padding:11px 16px;font-weight:700}
 .send:disabled{opacity:.5}
 .stats{display:flex;gap:8px;margin:4px 0 10px}
+.goal{background:var(--surface);border:var(--bw) solid var(--line);border-left:6px solid var(--gold);padding:12px 14px;margin:6px 0 14px}
+.goal .gh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.goal .gh b{font-size:17px}.goal .gh span{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.gbar{position:relative;height:10px;background:var(--soft-line);margin:9px 0 7px;overflow:hidden}
+.gbar i{position:absolute;left:0;top:0;bottom:0}.gbar .gs{background:var(--cool)}.gbar .gl{background:var(--warm)}
+.goal small{display:block;color:var(--muted);font-size:13px;line-height:1.35}
+.goal .gsteps{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.goal .gsteps span{font-size:12px;font-weight:700;border:1.5px solid var(--soft-line);padding:1px 7px;color:var(--muted)}
+.goal .gsteps span.on{border-color:var(--line);color:var(--ink)}.goal .gsteps span.done{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.goal1{position:absolute;top:10px;left:max(20px, env(safe-area-inset-left,0px));font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.vnew .label{color:var(--accent)!important}.vnew .vword{font-size:34px;font-weight:700;margin:6px 0 2px}.vnew .vword i{font-style:normal;color:var(--muted);font-size:22px;margin-right:6px}
+.vnew .ven{font-size:22px}
 .stat{flex:1;background:var(--surface);border:var(--bw) solid var(--line);padding:8px 10px;min-width:0}
 .stat b{display:block;font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .stat span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
@@ -333,6 +345,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
   <main class="pad home1" id="simple" hidden>
     <div class="bars" aria-hidden="true"><i></i><i></i><i></i></div>
     <span class="ver1" id="ver1"></span>
+    <span class="goal1" id="goal1"></span>
     <p class="hello" lang="de">Hallo!<br>Ich bin <span>Lena.</span></p>
     <button class="disc" id="goBtn" aria-label="Start talking with Lena">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
@@ -361,6 +374,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     </div>
     <div class="heat" id="heatBar"></div>
     <div class="legend" id="heatLegend"></div>
+    <div class="goal" id="goalBox"></div>
     <p class="label">Situations</p>
     <div class="grid" id="scenes"></div>
     <p class="label">Geschichten · folk tales</p>
@@ -400,6 +414,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <p class="lead">Each word warms up as you use it correctly and cools down if you don't use it for a while. Lena steers chats toward your coldest words. Tap a word to see its record.</p>
     <div class="heat" id="heatBar2"></div>
     <div class="legend" id="heatLegend2"></div>
+    <div class="goal" id="goalBox2"></div>
     <div class="links" style="margin:16px 0 20px"><button class="send" id="drillCold">Drill my coldest words</button></div>
     <div id="learnBox">
       <p class="label">Learned new words? (Duolingo, a class, a book)</p>
@@ -452,18 +467,19 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div id="vPlay">
       <div class="vhead"><span id="vProg">1 / 10</span><span id="vScore">0 richtig</span></div>
       <div class="vbar"><i id="vBarFill" style="width:0"></i></div>
-      <div class="vcard">
-        <div class="label" style="margin:0">Say it in German</div>
+      <div class="vcard" id="vCardBox">
+        <div class="label" style="margin:0" id="vLabel">Say it in German</div>
+        <div class="vword" id="vWord" lang="de" hidden></div>
         <div class="ven" id="vEn"></div>
         <div class="vres" id="vRes" hidden></div>
       </div>
-      <div class="vmic">
+      <div class="vmic" id="vMicRow">
         <button class="orb" id="vMic" aria-label="Say the German word">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
         <div class="phase" id="vPhase">Tap and say it<small></small></div>
       </div>
-      <div class="vrow"><input type="text" id="vType" placeholder="…or type it" lang="de" autocomplete="off" autocapitalize="off"><button class="send" id="vCheck">Check</button></div>
+      <div class="vrow" id="vTypeRow"><input type="text" id="vType" placeholder="…or type it" lang="de" autocomplete="off" autocapitalize="off"><button class="send" id="vCheck">Check</button></div>
       <div class="links" style="justify-content:center"><button class="ghost" id="vShow">Show answer</button><button class="send" id="vNext" hidden>Next</button></div>
     </div>
     <div id="vDone" hidden></div>
@@ -488,6 +504,8 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
       <div class="srow"><button class="send" id="testBtn">Save &amp; test</button><small id="testOut"></small></div>
       <div class="srow stack"><span>AI requests today (this phone)</span><small id="usageOut" class="hint" style="margin:4px 0 0"></small></div>
       <div class="srow"><span>First meeting</span><button class="ghost" id="redoOb">Do it again</button></div>
+      <div class="srow"><label for="newPerRound">New words in each Vokabeln round</label>
+        <select id="newPerRound"><option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
       <div class="srow"><label for="level">My level</label>
         <select id="level"><option value="A1">Beginner (A1)</option><option value="A1+">Beginner+ (A1+)</option><option value="A2">Elementary (A2)</option></select></div>
     </div>
@@ -582,7 +600,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.3.5";
+const VERSION = "2.4.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -616,10 +634,10 @@ const store = {
 const DEFAULTS = {
   provider: "gemini", key: "", level: "A1", voice: "", rate: 0.9, autoSpeak: true, autoSend: false, autoListen: false, theme: "light",
   seeded: false, recentStories: [], model: "", adv: false, added: [], mistakes: [], days: [], sessions: 0, recentTopics: [],
-  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}
+  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}, newPerRound: 3
 };
 const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
-const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests"];
+const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests","newPerRound"];
 let userRef = null, syncTimer = null;
 const WIDGET_KEYS = ["days", "stats", "added", "sessions", "level"];
 let widgetPort = null, widgetTimer = null;
@@ -647,7 +665,27 @@ String(window.LENA_VOCAB || "").split("\n").forEach(line => {
   BANK.push(e); BANKMAP.set(w.toLowerCase(), e);
 });
 const bankOf = w => BANKMAP.get(String(w || "").toLowerCase());
-const withArt = w => { const b = bankOf(w); return b && b.art ? b.art + " " + w : w; };
+/* ---------- vocabulary goals: A1 → A2 → B1 ---------- */
+// Each goal is a list of the most useful words for that level. A1 and A2 come from the word bank's levels;
+// B1 adds the bank's B1 words and then common dictionary words until it reaches about 2,400.
+// A word counts as learned when it is warm or hot.
+const DICTWORDS = (() => {
+  const have = new Set(BANK.map(b => b.w.toLowerCase())), out = [];
+  String(window.LENA_DICT || "").split("\n").forEach(l => {
+    if (!l || l[0] === "~") return; const [w, en, g] = l.split("|"); const k = String(w || "").toLowerCase();
+    if (!w || !en || have.has(k) || /^the\b|\(den |^to the$/.test(en) || (w.length < 4 && w === k)) return;
+    have.add(k); out.push({ w, en, art: ART[g] || "", lvl: 3, tag: "", rank: BANK.length + out.length + 1, dict: true });
+  });
+  return out;
+})();
+const GOALS = [
+  { id: "A1", words: BANK.filter(b => b.lvl <= 1) },
+  { id: "A2", words: BANK.filter(b => b.lvl <= 2) },
+  { id: "B1", words: [...BANK, ...DICTWORDS].slice(0, 2400) }
+];
+const DICTMAP = new Map(DICTWORDS.map(d => [d.w.toLowerCase(), d]));
+const entryInfo = w => bankOf(w) || DICTMAP.get(String(w || "").toLowerCase()) || null;
+const withArt = w => { const b = bankOf(w) || entryInfo(w); return b && b.art ? b.art + " " + w : w; };
 const LEVEL_NUM = { "A1": 1, "A1+": 1.5, "A2": 2 };
 // Importance 0-100: how common the word is in everyday German, plus a boost for words that keep coming up in your own chats.
 function importance(w){
@@ -669,8 +707,9 @@ function stage(w){
 function nextNewWords(n = 6){
   const known = new Set(allWords().map(w => w.toLowerCase()));
   const max = (LEVEL_NUM[S.level] || 1) + 1;
+  const goal = new Set(currentGoal().g.words.map(b => b.w.toLowerCase()));
   return BANK.filter(b => !known.has(b.w.toLowerCase()) && b.lvl <= max && b.tag !== "g")
-    .map(b => [b, importance(b.w) + sameArea(b.w) + Math.random() * 10]).sort((a, c) => c[1] - a[1]).slice(0, n).map(x => x[0]);
+    .map(b => [b, importance(b.w) + sameArea(b.w) + (goal.has(b.w.toLowerCase()) ? 20 : 0) + Math.random() * 10]).sort((a, c) => c[1] - a[1]).slice(0, n).map(x => x[0]);
 }
 function streak(){ const set = new Set(S.days); let n = 0; const d = new Date(); if (!set.has(today())) d.setDate(d.getDate()-1); while (set.has(dayKey(d))) { n++; d.setDate(d.getDate()-1); } return n; }
 
@@ -705,6 +744,34 @@ function animateIn(...els){
 $("advBtn").onclick = () => { S.adv = !S.adv; persist("adv"); show("home"); };
 $("goBtn").onclick = openTalk;
 $("setupBtn").onclick = () => { renderSettings(); show("settings", "Settings"); };
+function goalStats(g){
+  const known = new Set(allWords().map(w => w.toLowerCase()));
+  let learned = 0, started = 0;
+  g.words.forEach(b => { const k = b.w.toLowerCase(); if (!known.has(k)) return; started++; if (warmth(b.w) >= 40) learned++; });
+  return { learned, started, total: g.words.length };
+}
+// The current goal is the first one not yet 90% learned.
+function currentGoal(){
+  for (const g of GOALS) { const st = goalStats(g); if (st.learned < Math.ceil(st.total * 0.9)) return { g, st }; }
+  const g = GOALS[GOALS.length - 1]; return { g, st: goalStats(g) };
+}
+// Next new words for the current goal, most useful first, that the learner hasn't met yet.
+function goalNewWords(n){
+  if (!n) return [];
+  const known = new Set(allWords().map(w => w.toLowerCase())), { g } = currentGoal();
+  return g.words.filter(b => !known.has(b.w.toLowerCase()) && b.en && b.tag !== "g" && fold(b.en) !== fold(b.w)).slice(0, n);
+}
+function renderGoal(id){
+  const el = $(id); if (!el) return;
+  const { g, st } = currentGoal(), need = Math.ceil(st.total * 0.9);
+  const pl = st.learned / st.total * 100, ps = st.started / st.total * 100;
+  const steps = GOALS.map(x => { const s2 = goalStats(x); const done = s2.learned >= Math.ceil(s2.total * 0.9); return `<span class="${done ? "done" : x === g ? "on" : ""}">${x.id} · ${x.words.length.toLocaleString()}${done ? " ✓" : ""}</span>`; }).join("");
+  const per = +S.newPerRound || 0;
+  el.innerHTML = `<div class="gh"><b>Ziel ${g.id}</b><span>${st.learned} of ${st.total} learned</span></div>
+    <div class="gbar" role="img" aria-label="${st.learned} learned, ${st.started} started, of ${st.total}"><i class="gs" style="width:${ps.toFixed(1)}%"></i><i class="gl" style="width:${pl.toFixed(1)}%"></i></div>
+    <small>${st.started} started · ${g.id} is done at ${need} warm or hot words. ${per ? `Each Vokabeln round adds ${per} new ${g.id} word${per === 1 ? "" : "s"}.` : "New words in Vokabeln are off (Settings)."}</small>
+    <div class="gsteps">${steps}</div>`;
+}
 function renderHome(){
   $("needKey").hidden = !!S.key; $("setupBtn").hidden = !!S.key;
   $("tapCap").textContent = S.chat ? "Tap to carry on your chat" : "Tap and start talking";
@@ -712,6 +779,8 @@ function renderHome(){
   $("sStreak").textContent = streak(); $("sSessions").textContent = S.sessions;
   const h = heatCounts(); $("sWords").textContent = h.warm + h.hot;
   renderHeat("heatBar", "heatLegend");
+  renderGoal("goalBox");
+  const cg = currentGoal(); $("goal1").textContent = `Ziel ${cg.g.id} · ${cg.st.learned} / ${cg.st.total}`;
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
 $("scenes").onclick = e => { const b = e.target.closest(".scene"); if (b) { const s = SCENES[+b.dataset.i]; startChat({ title: s.de, mode: "scene", text: s.brief }); } };
@@ -1230,7 +1299,7 @@ function addWords(list){
   return add.length;
 }
 function renderWords(){
-  renderHeat("heatBar2", "heatLegend2");
+  renderHeat("heatBar2", "heatLegend2"); renderGoal("goalBox2");
   const groups = { hot: [], warm: [], cool: [], cold: [] };
   allWords().map(w => [w, warmth(w)]).sort((a, b) => b[1] - a[1]).forEach(([w, t]) => groups[level(t)].push(w));
   $("wordList").innerHTML = Object.entries(groups).filter(([, ws]) => ws.length).map(([lv, ws]) =>
@@ -1288,6 +1357,7 @@ function renderVoiceList(){
 }
 function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
+  $("newPerRound").value = String(S.newPerRound ?? 3);
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
   $("hear").value = S.hear; $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
   renderVoiceList(); renderAccount(); applyTheme(S.theme); renderUsage();
@@ -1296,6 +1366,7 @@ $("provider").onchange = () => { S.provider = $("provider").value; S.model = "";
 $("apiKey").onchange = () => { S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model"); };
 $("level").onchange = () => { S.level = $("level").value; persist("level"); };
 $("voice").onchange = () => { S.voice = $("voice").value; persist("voice"); };
+$("newPerRound").onchange = () => { S.newPerRound = +$("newPerRound").value; persist("newPerRound"); };
 $("rate").oninput = () => { S.rate = +$("rate").value; $("rateOut").textContent = S.rate.toFixed(2) + "×"; persist("rate"); };
 function renderUsage(){
   const u = store.get("usage:" + today(), {}), total = Object.values(u).reduce((a, b) => a + b, 0);
@@ -1440,7 +1511,7 @@ $("wordList").addEventListener("click", e => {
 });
 
 /* ---------- Vokabeln: quick drill ---------- */
-function enOf(w){ return (S.en && S.en[w]) || EN[w] || (bankOf(w) || {}).en || ""; }
+function enOf(w){ return (S.en && S.en[w]) || EN[w] || (entryInfo(w) || {}).en || ""; }
 const fold = x => String(x || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
   .replace(/[^a-z\s-]/g, " ").replace(/\s+/g, " ").trim().replace(/^(der|die|das|den|ein|eine) (?=\S)/, "");
 function lev(a, b){ const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i]); for (let j = 1; j <= n; j++) d[0][j] = j;
@@ -1464,17 +1535,46 @@ async function startVocab(){
   await ensureMeanings();
   const pool = allWords().filter(w => enOf(w) && fold(enOf(w)) !== fold(w));
   if (!pool.length) { $("vDone").innerHTML = `<p class="lead">No words with English meanings yet.</p>`; return; }
+  // New words from the current goal: each is introduced, then asked again a few cards later.
+  const fresh = goalNewWords(Math.max(0, Math.min(5, +S.newPerRound || 0)));
+  const nReview = Math.max(0, 10 - fresh.length);
   const byCold = pool.map(w => [w, warmth(w) + Math.random() * 15]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
-  const cold = byCold.slice(0, 16).sort(() => Math.random() - .5).slice(0, 8);
-  const rest = byCold.filter(w => !cold.includes(w)).sort(() => Math.random() - .5).slice(0, 2);
-  V = { list: [...cold, ...rest].sort(() => Math.random() - .5), i: 0, ok: 0, res: [] };
+  const cold = byCold.slice(0, Math.ceil(nReview * 1.6)).sort(() => Math.random() - .5).slice(0, Math.ceil(nReview * 0.8));
+  const rest = byCold.filter(w => !cold.includes(w)).sort(() => Math.random() - .5).slice(0, nReview - cold.length);
+  const review = [...cold, ...rest].sort(() => Math.random() - .5);
+  const list = [], due = [];
+  let fi = 0;
+  review.forEach((w, i) => {
+    if (fi < fresh.length && i % 2 === 0) { list.push({ intro: fresh[fi] }); due.push({ w: fresh[fi].w, at: list.length + 2 }); fi++; }
+    list.push(w);
+    while (due.length && due[0].at <= list.length) list.push(due.shift().w);
+  });
+  while (fi < fresh.length) { list.push({ intro: fresh[fi] }); due.push({ w: fresh[fi].w, at: 0 }); fi++; }
+  due.forEach(d => list.push(d.w));
+  if (!list.length) { $("vDone").innerHTML = `<p class="lead">No words to practise yet.</p>`; return; }
+  V = { list, i: 0, ok: 0, res: [], tests: list.filter(x => typeof x === "string").length, fresh: fresh.length };
   $("vPlay").hidden = false; $("vDone").hidden = true; vCard();
 }
 function vCard(){
-  const w = V.list[V.i]; V.done = false;
-  $("vEn").textContent = enOf(w); $("vProg").textContent = `${V.i + 1} / ${V.list.length}`; $("vScore").textContent = `${V.ok} richtig`;
+  const item = V.list[V.i]; V.done = false;
+  $("vProg").textContent = `${V.i + 1} / ${V.list.length}`; $("vScore").textContent = `${V.ok} richtig`;
   $("vBarFill").style.width = (V.i / V.list.length * 100) + "%";
-  $("vRes").hidden = true; $("vType").value = ""; $("vNext").hidden = true; $("vShow").hidden = false; $("vMic").className = "orb";
+  $("vRes").hidden = true; $("vType").value = ""; $("vMic").className = "orb";
+  const intro = typeof item === "object";
+  $("vCardBox").classList.toggle("vnew", intro); $("vWord").hidden = !intro;
+  $("vMicRow").hidden = intro; $("vTypeRow").hidden = intro;
+  if (intro) {
+    // Introduce a new goal word: German, meaning, spoken. It joins My words now and is asked again shortly.
+    const b = item.intro;
+    $("vLabel").textContent = "Neues Wort · new word";
+    $("vWord").innerHTML = `${b.art ? `<i>${esc(b.art)}</i>` : ""}${esc(b.w)}`; $("vEn").textContent = b.en;
+    addWords([b.w]); if (!bankOf(b.w) && !S.en[b.w]) { S.en[b.w] = b.en; persist("en"); }
+    $("vShow").hidden = true; $("vNext").hidden = false; $("vNext").textContent = "Got it";
+    V.done = true; speak(b.w, Math.max(0.6, S.rate - 0.1));
+    return;
+  }
+  $("vLabel").textContent = "Say it in German"; $("vNext").textContent = "Next";
+  $("vEn").textContent = enOf(item); $("vNext").hidden = true; $("vShow").hidden = false;
   setVPhase("Tap and say it", "");
 }
 // Second try after a miss (spoken or typed): shown as corrected, counted as practice, but it doesn't warm the word.
@@ -1506,8 +1606,9 @@ function vNext(){
   V.i++;
   if (V.i < V.list.length) { vCard(); return; }
   $("vBarFill").style.width = "100%"; $("vPlay").hidden = true; $("vDone").hidden = false;
-  const fixedN = V.res.filter(r => r.fixed).length;
-  $("vDone").innerHTML = `<h2>${V.ok} of ${V.list.length} richtig${fixedN ? ` · ${fixedN} corrected` : ""}</h2><p class="lead">Words you got right first time warm up. Words you missed cool down and come back sooner, even if you corrected them.</p>
+  const fixedN = V.res.filter(r => r.fixed).length, cg = currentGoal();
+  $("vDone").innerHTML = `<h2>${V.ok} of ${V.res.length} richtig${fixedN ? ` · ${fixedN} corrected` : ""}</h2><p class="lead">Words you got right first time warm up. Words you missed cool down and come back sooner, even if you corrected them.${V.fresh ? ` ${V.fresh} new word${V.fresh === 1 ? "" : "s"} added to My words.` : ""}</p>
+    <p class="lead" style="margin-top:-6px"><b>Ziel ${cg.g.id}:</b> ${cg.st.learned} of ${cg.st.total} learned · ${cg.st.started} started</p>
     <div class="card vlist">${V.res.map(r => `<div><span lang="de">${esc(r.w)}</span><span>${esc(enOf(r.w))} ${r.ok ? "✓" : r.fixed ? `<span class="vfix">corrected ✓</span>` : "✗"}</span></div>`).join("")}</div>
     <div class="links"><button class="send" id="vAgain">Another round</button><button class="ghost" id="vHome">Home</button></div>`;
   $("vAgain").onclick = startVocab; $("vHome").onclick = () => show("home");
