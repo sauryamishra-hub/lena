@@ -571,7 +571,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.2.0";
+const VERSION = "2.3.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -610,8 +610,10 @@ const DEFAULTS = {
 const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
 const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests"];
 let userRef = null, syncTimer = null;
+const WIDGET_KEYS = ["days", "stats", "added", "sessions", "level"];
+let widgetPort = null, widgetTimer = null;
 // Everything that matters is saved to the account (Firestore), so uninstalling or changing phones loses nothing.
-const persist = k => { store.set(k, S[k]); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
+const persist = k => { store.set(k, S[k]); if (WIDGET_KEYS.includes(k)) widgetSoon(); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
 function syncNow(){
   if (!userRef) return; const d = {}; SYNCED.forEach(k => d[k] = S[k] === undefined ? null : S[k]);
   d.updatedAt = store.get("updatedAt", Date.now());
@@ -1341,6 +1343,31 @@ function renderHeat(barId, legendId){
   const h = heatCounts(), total = allWords().length || 1, order = ["hot", "warm", "cool", "cold"];
   $(barId).innerHTML = order.map(k => `<i style="width:${(h[k] / total * 100).toFixed(2)}%;background:${HEAT[k].c}"></i>`).join("");
   $(legendId).innerHTML = order.map(k => `<span style="--c:${HEAT[k].c}">${HEAT[k].label} ${h[k]}</span>`).join("");
+}
+/* ---------- Android home-screen widget (only inside the Lena Android app) ---------- */
+// The app opens a message channel; Lena sends the streak, practice days and a week of "words of the day".
+window.addEventListener("message", e => {
+  const p = e.ports && e.ports[0];
+  if (!p || e.data !== "lena-widget") return;
+  widgetPort = p; p.onmessage = () => {}; sendWidget();
+});
+function widgetSoon(){ if (!widgetPort) return; clearTimeout(widgetTimer); widgetTimer = setTimeout(sendWidget, 1500); }
+// One word per day for the next 7 days: useful words you know but haven't used lately, mixed with good next new words. Fixed for the day.
+function widgetWords(){
+  const saved = store.get("widgetWords", null);
+  if (saved && saved.day === today() && saved.level === S.level && saved.list.length) return saved.list;
+  const rev = focusWords(12), nw = nextNewWords(10).map(b => b.w), out = [];
+  for (let i = 0; out.length < 7 && i < 12; i++) [rev[i], nw[i]].forEach(w => { if (w && out.length < 7 && !out.includes(w) && (enOf(w) || localMeaning(w))) out.push(w); });
+  const list = out.map(w => ({ w, de: withArt(w), en: enOf(w) || localMeaning(w) }));
+  store.set("widgetWords", { day: today(), level: S.level, list });
+  return list;
+}
+function sendWidget(){
+  if (!widgetPort) return;
+  try {
+    const h = heatCounts();
+    widgetPort.postMessage(JSON.stringify({ v: 1, day: today(), days: S.days.slice(-120), warm: h.warm + h.hot, total: allWords().length, sessions: S.sessions, words: widgetWords() }));
+  } catch {}
 }
 function focusWords(n = 8){
   const scored = allWords().filter(w => (bankOf(w) || {}).tag !== "g").map(w => [w, importance(w) * (1 - warmth(w) / 100) + sameArea(w) + Math.random() * 15]).sort((a, b) => b[1] - a[1]);
