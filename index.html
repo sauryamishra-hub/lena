@@ -248,7 +248,10 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .acct{display:flex;align-items:center;gap:10px}
 .acct span{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:500}
 .invite-list{display:flex;flex-direction:column}
-.invite-list div{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--soft-line);overflow-wrap:anywhere}
+.invite-list > div{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--soft-line);overflow-wrap:anywhere;flex-wrap:wrap}
+.invite-list .who{flex:1 1 160px;min-width:0}.invite-list .who small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.invite-list .acts{display:flex;gap:6px;flex-wrap:wrap}.invite-list .chip.go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.invite-list .fresh{background:var(--gold-soft)}
 .toggle{display:none}
 @keyframes vtFade{from{opacity:0}to{opacity:1}}
 @keyframes vtRight{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
@@ -542,7 +545,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
           <div class="addrow" style="margin:0"><input type="text" id="inviteInput" placeholder="friend@gmail.com" autocomplete="off" inputmode="email"><button class="send" id="inviteBtn">Invite</button></div></div>
         <div class="invite-list" id="inviteList"></div>
       </div>
-      <small class="hint">Share the app link and your API key with friends yourself.</small>
+      <small class="hint">Inviting adds the address to Lena's list. Lena can't send email by itself: tap <b>Email</b> to open a ready-made invite in your mail app, or <b>Share</b> to send it on WhatsApp or anywhere else. Your friend signs in with that exact Gmail address.</small>
     </div>
     <p class="hint" style="margin-top:28px;text-align:center" id="verFoot"></p>
   </main>
@@ -600,7 +603,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.4.0";
+const VERSION = "2.4.1";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -1980,21 +1983,47 @@ function renderAccount(){
   $("inviteBox").hidden = !isAdmin();
   if (isAdmin()) loadInvites();
 }
-async function loadInvites(){
+// The invite message: app link, Android app, which address to sign in with, and the key.
+function inviteMessage(email){
+  const site = "https://sauryamishra-hub.github.io/lena/";
+  return { subject: "You're invited to Lena — practise German by talking",
+    body: `Hi!\n\nI've invited you to Lena, a little app for learning German by talking with an AI tutor.\n\n` +
+      `1. Open ${site}\n   On Android you can install the app instead: ${site}lena.apk\n` +
+      `2. Tap "Sign in with Google" and choose ${email}. It only works with this address.\n` +
+      `3. Lena needs a free Gemini key: create one at https://aistudio.google.com/apikey and paste it in Settings (or ask me).\n\nViel Spaß!` };
+}
+function emailInvite(email){
+  const m = inviteMessage(email);
+  location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
+  markInviteSent(email);
+}
+async function shareInvite(email){
+  const m = inviteMessage(email);
+  if (navigator.share) { try { await navigator.share({ title: m.subject, text: m.body }); markInviteSent(email); } catch {} return; }
+  try { await navigator.clipboard.writeText(m.subject + "\n\n" + m.body); toast("Invite copied — paste it anywhere"); markInviteSent(email); } catch { emailInvite(email); }
+}
+function markInviteSent(email){ fbDb && fbDb.collection("invites").doc(email).set({ sentAt: Date.now() }, { merge: true }).then(() => loadInvites()).catch(() => {}); }
+const when = t => t ? new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
+async function loadInvites(fresh){
   try {
     const qs = await fbDb.collection("invites").get();
-    $("inviteList").innerHTML = qs.docs.length ? qs.docs.map(d => `<div><span>${esc(d.id)}</span><button class="chip" data-email="${esc(d.id)}">Remove</button></div>`).join("") : `<p class="lead" style="margin:0">No friends invited yet.</p>`;
+    $("inviteList").innerHTML = qs.docs.length ? qs.docs.map(d => { const v = d.data ? d.data() || {} : {}, e = esc(d.id);
+      return `<div class="${d.id === fresh ? "fresh" : ""}"><span class="who">${e}<small>Invited ${when(v.invitedAt)}${v.sentAt ? ` · message sent ${when(v.sentAt)}` : " · message not sent yet"}</small></span>
+        <span class="acts"><button class="chip${v.sentAt ? "" : " go"}" data-mail="${e}">Email</button><button class="chip" data-share="${e}">Share</button><button class="chip" data-email="${e}">Remove</button></span></div>`; }).join("")
+      : `<p class="lead" style="margin:0">No friends invited yet.</p>`;
   } catch { $("inviteList").textContent = "Couldn't load the invite list."; }
 }
 $("inviteBtn").onclick = async () => {
   const email = $("inviteInput").value.trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("inviteInput").focus(); return; }
   $("inviteBtn").disabled = true;
-  try { await fbDb.collection("invites").doc(email).set({ invitedAt: Date.now(), by: me.email }); $("inviteInput").value = ""; await loadInvites(); }
+  try { await fbDb.collection("invites").doc(email).set({ invitedAt: Date.now(), by: me.email }, { merge: true }); $("inviteInput").value = ""; await loadInvites(email); toast(`${email} can now sign in. Tap Email to send the invite.`); }
   catch { $("inviteList").insertAdjacentHTML("afterbegin", `<p class="err">Couldn't add ${esc(email)}. Try again.</p>`); }
   finally { $("inviteBtn").disabled = false; }
 };
 $("inviteList").onclick = async e => {
+  const m = e.target.closest("[data-mail]"); if (m) { emailInvite(m.dataset.mail); return; }
+  const sh = e.target.closest("[data-share]"); if (sh) { shareInvite(sh.dataset.share); return; }
   const b = e.target.closest("[data-email]"); if (!b) return;
   if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Tap again to remove"; return; }
   try { await fbDb.collection("invites").doc(b.dataset.email).delete(); } catch {}
