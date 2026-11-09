@@ -571,7 +571,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.3.1";
+const VERSION = "2.3.2";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -1207,6 +1207,7 @@ $("endBtn").onclick = () => {
   stopAll();
   const r = finalizeChat(); session = null; turns = []; chatLog = []; fixes = []; newWords = [];
   show("home");
+  syncWidgetByLink();
   toast(r.mine ? `Saved · ${r.mine} message${r.mine === 1 ? "" : "s"} · ${r.fixes} correction${r.fixes === 1 ? "" : "s"}${r.words ? ` · ${r.words} new word${r.words === 1 ? "" : "s"}` : ""}` : "Chat closed");
 };
 
@@ -1352,21 +1353,31 @@ window.addEventListener("message", e => {
   widgetPort = p; p.onmessage = () => {}; sendWidget();
 });
 function widgetSoon(){ if (!widgetPort) return; clearTimeout(widgetTimer); widgetTimer = setTimeout(sendWidget, 1500); }
-// One word per day for the next 7 days: useful words you know but haven't used lately, mixed with good next new words. Fixed for the day.
+// 20 words for the widget (word of the day + refresh): useful words you know but haven't used lately, mixed with good next new words. Fixed for the day.
 function widgetWords(){
   const saved = store.get("widgetWords", null);
-  if (saved && saved.day === today() && saved.level === S.level && saved.list.length) return saved.list;
-  const rev = focusWords(12), nw = nextNewWords(10).map(b => b.w), out = [];
-  for (let i = 0; out.length < 7 && i < 12; i++) [rev[i], nw[i]].forEach(w => { if (w && out.length < 7 && !out.includes(w) && (enOf(w) || localMeaning(w))) out.push(w); });
+  if (saved && saved.day === today() && saved.level === S.level && saved.list.length >= 20) return saved.list;
+  const rev = focusWords(24), nw = nextNewWords(24).map(b => b.w), out = [];
+  for (let i = 0; out.length < 20 && i < 24; i++) [rev[i], nw[i]].forEach(w => { if (w && out.length < 20 && !out.includes(w) && (enOf(w) || localMeaning(w))) out.push(w); });
   const list = out.map(w => ({ w, de: withArt(w), en: enOf(w) || localMeaning(w) }));
   store.set("widgetWords", { day: today(), level: S.level, list });
   return list;
 }
+function widgetPayload(){
+  const h = heatCounts();
+  return JSON.stringify({ v: 3, day: today(), level: S.level, heat: h, warm: h.warm + h.hot, total: allWords().length, sessions: S.sessions, words: widgetWords() });
+}
 function sendWidget(){
   if (!widgetPort) return;
+  try { widgetPort.postMessage(widgetPayload()); } catch {}
+}
+// Backup route when the message channel isn't there: hand the data to the app through a lena:// link (needs a tap, so it runs on Finish).
+const IN_APP = /[?&]app=android/.test(location.search) || document.referrer.startsWith("android-app://io.github.sauryamishra.lena");
+function syncWidgetByLink(){
+  if (!IN_APP || widgetPort) return;
   try {
-    const h = heatCounts();
-    widgetPort.postMessage(JSON.stringify({ v: 2, day: today(), days: S.days.slice(-120), heat: h, warm: h.warm + h.hot, total: allWords().length, sessions: S.sessions, words: widgetWords() }));
+    const b = btoa(String.fromCharCode(...new TextEncoder().encode(widgetPayload()))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    location.href = "intent://sync?d=" + b + "#Intent;scheme=lena;package=io.github.sauryamishra.lena;end";
   } catch {}
 }
 function focusWords(n = 8){
