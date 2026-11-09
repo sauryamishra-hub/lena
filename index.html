@@ -59,6 +59,10 @@ p.lead{color:var(--muted);margin:0 0 16px}
 .bar{display:flex;align-items:center;gap:8px;padding-block:12px;border-bottom:var(--bw) solid var(--line);background:var(--bg)}
 .bar h1{font-size:21px;font-weight:700;letter-spacing:-.01em;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .logo-img{width:30px;height:30px;flex:none;background:#fff}
+.ver1{position:absolute;top:10px;right:max(16px, env(safe-area-inset-right,0px));font-size:11px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.vline{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:2px 0 14px;font-size:13px;font-weight:600;color:var(--muted)}
+.vline span{border:1.5px solid var(--line);padding:2px 8px;color:var(--ink);font-variant-numeric:tabular-nums}
+.vline button{font-size:13px}
 .ver{font-size:11px;font-weight:700;border:1.5px solid var(--line);padding:0 6px;font-variant-numeric:tabular-nums;color:var(--muted)}
 .ghost{border:var(--bw) solid var(--line);background:var(--surface);padding:6px 12px;font-size:14px;font-weight:600;border-radius:0}
 .ghost.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
@@ -327,6 +331,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 
   <main class="pad home1" id="simple" hidden>
     <div class="bars" aria-hidden="true"><i></i><i></i><i></i></div>
+    <span class="ver1" id="ver1"></span>
     <p class="hello" lang="de">Hallo!<br>Ich bin <span>Lena.</span></p>
     <button class="disc" id="goBtn" aria-label="Start talking with Lena">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
@@ -465,6 +470,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 
   <main class="scroll pad" id="settings" hidden>
     <h2>Settings</h2>
+    <div class="vline"><span id="verWeb"></span><span id="verApp" hidden></span><button class="ghost" id="appUpdBtn" hidden>Check for app update</button></div>
     <p class="lead" id="setLead">Everything here stays on this phone.</p>
 
     <div id="acctBox" hidden>
@@ -575,7 +581,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.3.3";
+const VERSION = "2.3.4";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -1380,19 +1386,29 @@ const IN_APP = /[?&]app=android/.test(location.search) || document.referrer.star
 // Android app updates: the app passes its version (av=); app-version.json on the site names the newest one. "Later" asks again after 3 days.
 // Apps before 1.3 don't pass a version, so they count as 1.2 (versionCode 3).
 const APP_VERSION = IN_APP ? (+(new URLSearchParams(location.search).get("av")) || 3) : 0;
-async function checkAppUpdate(){
+const APP_NAMES = { 1: "1.0", 2: "1.1", 3: "1.2", 4: "1.3" };
+const APP_VERSION_NAME = !IN_APP ? "" : new URLSearchParams(location.search).get("avn") || (new URLSearchParams(location.search).get("av") ? (APP_NAMES[APP_VERSION] || "build " + APP_VERSION) : "1.2 or older");
+// Version shown on the simple home screen and at the top of Settings (web version, plus the Android app's when inside it).
+$("ver1").textContent = "v" + VERSION + (IN_APP ? " · app " + APP_VERSION_NAME : "");
+$("verWeb").textContent = "Lena " + VERSION;
+if (IN_APP) { $("verApp").hidden = false; $("verApp").textContent = "Android app " + APP_VERSION_NAME; $("appUpdBtn").hidden = false; }
+$("appUpdBtn").onclick = async () => { const r = await checkAppUpdate(true); if (r === "latest") toast("You have the latest Lena app"); else if (r === "error") toast("Couldn't check right now"); };
+async function checkAppUpdate(force){
   if (!IN_APP) return;
   try {
-    const r = await fetch("app-version.json?x=" + Date.now(), { cache: "no-store" }); if (!r.ok) return;
+    const r = await fetch("app-version.json?x=" + Date.now(), { cache: "no-store" }); if (!r.ok) return "error";
     const v = await r.json();
     const skip = store.get("appUpdSkip", null);
-    if (!(v.versionCode > APP_VERSION) || (skip && skip.code === v.versionCode && Date.now() < skip.until) || document.querySelector(".appupd")) return;
+    if (!(v.versionCode > APP_VERSION)) return "latest";
+    if (document.querySelector(".appupd")) return "shown";
+    if (!force && skip && skip.code === v.versionCode && Date.now() < skip.until) return "later";
     const d = document.createElement("div"); d.className = "appupd"; d.setAttribute("role", "status");
     d.innerHTML = `<p><b>New Lena app ${esc(v.versionName)}</b>${esc(v.notes || "Tap Update, then install it over this one. Your progress stays.")}</p><a href="${esc(v.url)}">Update</a><button type="button">Later</button>`;
     d.querySelector("button").onclick = () => { store.set("appUpdSkip", { code: v.versionCode, until: Date.now() + 3 * 86400000 }); d.remove(); };
     d.querySelector("a").onclick = () => setTimeout(() => d.remove(), 500);
     document.body.appendChild(d);
-  } catch {}
+    return "shown";
+  } catch { return "error"; }
 }
 setTimeout(checkAppUpdate, 2500);
 function syncWidgetByLink(){
