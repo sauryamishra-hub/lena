@@ -370,6 +370,23 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 @keyframes achUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes achBit{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
 @media (prefers-reduced-motion:reduce){.achpop .kick,.achpop .go{opacity:1}.achpop .bits{display:none}}
+/* microphone on: unmistakable */
+.orb.listening{background:var(--live);color:var(--live)}
+.orb.listening::before{background:#fff;inset:20%;animation:none}
+.orb.listening::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:3px solid var(--live);animation:micRing 1.3s ease-out infinite;pointer-events:none}
+.mic.live{background:var(--live);color:#fff;animation:none;position:relative}
+.mic.live::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:3px solid var(--live);animation:micRing 1.3s ease-out infinite;pointer-events:none}
+@keyframes micRing{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.55);opacity:0}}
+.phase.live{color:var(--live)}
+.phase.live::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--live);margin-right:7px;vertical-align:1px;animation:micBlink 1s steps(2,start) infinite}
+@keyframes micBlink{to{visibility:hidden}}
+.phase.live small{color:var(--ink)}
+.vmic .phase.live{font-size:19px}
+.vtry{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-top:6px;letter-spacing:.02em}
+.vres.near{color:var(--fix)} .vres.far{color:var(--ink)}
+.vres .vhint{font-family:var(--f-ui);letter-spacing:.18em;font-size:24px;margin-top:6px;display:block;font-weight:700;color:var(--ink)}
+.timeline{font-size:13px;color:var(--muted);margin:-2px 0 12px;font-variant-numeric:tabular-nums}
+.timeline b{color:var(--ink)}
 @media (max-width:420px){.bar .ver{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -426,7 +443,9 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
       <div class="stat"><b id="sStreak">0</b><span>Streak</span></div>
       <div class="stat"><b id="sWords">0</b><span>Warm words</span></div>
       <div class="stat"><b id="sSessions">0</b><span>Chats</span></div>
+      <div class="stat"><b id="sTime">0</b><span>Min today</span></div>
     </div>
+    <p class="timeline" id="timeLine"></p>
     <div class="heat" id="heatBar"></div>
     <div class="legend" id="heatLegend"></div>
     <div class="goal" id="goalBox"></div>
@@ -467,6 +486,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 
   <main class="scroll pad" id="words" hidden>
     <h2>My words</h2>
+    <p class="timeline" id="timeLine2"></p>
     <p class="lead">Each word warms up as you use it correctly and cools down if you don't use it for a while. Lena steers chats toward your coldest words. Tap a word to see its record.</p>
     <div class="heat" id="heatBar2"></div>
     <div class="legend" id="heatLegend2"></div>
@@ -670,7 +690,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.5.0";
+const VERSION = "2.5.1";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -705,10 +725,10 @@ const DEFAULTS = {
   provider: "gemini", key: "", level: "A1", voice: "", rate: 0.9, autoSpeak: true, autoSend: false, autoListen: false, theme: "light",
   seeded: false, recentStories: [], model: "", adv: false, added: [], mistakes: [], days: [], sessions: 0, recentTopics: [],
   stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}, newPerRound: 3,
-  ach: {}, achInit: false, counts: { voice: 0, stories: 0, newsDays: [], vRounds: 0, perfect: 0 }
+  ach: {}, achInit: false, time: { total: 0, days: {} }, counts: { voice: 0, stories: 0, newsDays: [], vRounds: 0, perfect: 0 }
 };
 const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
-const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests","newPerRound","ach","achInit","counts"];
+const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","mistakes","days","sessions","recentTopics","stats","en","key","provider","level","rate","autoSpeak","autoSend","adv","chat","hear","prefsV2","recentStories","interests","newPerRound","ach","achInit","counts","time"];
 let userRef = null, syncTimer = null;
 const WIDGET_KEYS = ["days", "stats", "added", "sessions", "level"];
 let widgetPort = null, widgetTimer = null;
@@ -720,7 +740,35 @@ function syncNow(){
   d.updatedAt = store.get("updatedAt", Date.now());
   userRef.set(JSON.parse(JSON.stringify(d)), { merge: true }).then(() => store.set("lastSync", Date.now())).catch(() => {});
 }
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && userRef) { clearTimeout(syncTimer); syncNow(); } });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") { saveTime(); if (userRef) { clearTimeout(syncTimer); syncNow(); } } });
+/* ---------- time spent learning ---------- */
+// Counted in 10-second steps while Lena is on screen and you've touched, typed or spoken in the last 2 minutes
+// (or Lena is talking / listening). Idle screens don't count. Saved to the account as `time`.
+let lastAct = Date.now(), timeDirty = 0;
+["pointerdown", "keydown", "touchstart", "wheel"].forEach(ev => addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true, capture: true }));
+function timeObj(){ if (!S.time || typeof S.time !== "object") S.time = { total: 0, days: {} }; if (!S.time.days) S.time.days = {}; S.time.total = +S.time.total || 0; return S.time; }
+function saveTime(){ if (timeDirty) { timeDirty = 0; persist("time"); } }
+setInterval(() => {
+  if (document.visibilityState !== "visible") return;
+  let busyAudio = false; try { busyAudio = speechSynthesis.speaking; } catch {}
+  if (Date.now() - lastAct > 120000 && !busyAudio && !(typeof recording !== "undefined" && recording) && !vListening) return;
+  if (["gate", "onboard"].includes(current)) return;
+  const t = timeObj(), d = today(); t.total += 10; t.days[d] = (t.days[d] || 0) + 10;
+  const keys = Object.keys(t.days).sort(); if (keys.length > 400) keys.slice(0, keys.length - 400).forEach(k => delete t.days[k]);
+  store.set("time", t); if (++timeDirty >= 6) saveTime();
+  if (current === "home") renderTime();
+}, 10000);
+const fmtMin = sec => { const m = Math.round(sec / 60); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`; };
+function timeStats(){
+  const t = timeObj(), d = new Date(); let week = 0;
+  for (let i = 0; i < 7; i++) { week += t.days[dayKey(d)] || 0; d.setDate(d.getDate() - 1); }
+  return { today: t.days[today()] || 0, week, total: t.total };
+}
+function renderTime(){
+  const st = timeStats(), line = `Time with Lena: <b>${fmtMin(st.today)}</b> today · <b>${fmtMin(st.week)}</b> in the last 7 days · <b>${fmtMin(st.total)}</b> in all`;
+  ["timeLine", "timeLine2"].forEach(id => { const el = $(id); if (el) el.innerHTML = line; });
+  const el = $("sTime"); if (el) el.textContent = Math.round(st.today / 60);
+}
 // New defaults (no auto-send, light theme) applied once per account.
 function migratePrefs(){ if (S.prefsV2) return; S.autoSend = false; if (S.theme === "system") S.theme = "light"; S.prefsV2 = true; ["autoSend", "theme", "prefsV2"].forEach(persist); applyTheme(S.theme); }
 migratePrefs();
@@ -870,7 +918,8 @@ function renderHome(){
   renderHeat("heatBar", "heatLegend");
   renderGoal("goalBox");
   const cg = currentGoal(); $("goal1").textContent = `Ziel ${cg.g.id} · ${cg.st.learned} / ${cg.st.total}`;
-  renderAchCount();
+  renderAchCount(); renderTime();
+  $("goal1").textContent += ` · ${Math.round(timeStats().today / 60)} min today`;
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
 $("scenes").onclick = e => { const b = e.target.closest(".scene"); if (b) { const s = SCENES[+b.dataset.i]; startChat({ title: s.de, mode: "scene", text: s.brief }); } };
@@ -956,7 +1005,7 @@ let phase = "idle", loop = false;
 const PHASES = { listening: "Ich höre zu…", thinking: "Lena denkt nach…", speaking: "Lena spricht…", paused: "Your turn", idle: "" };
 function setPhase(p, note){
   phase = p; const o = $("orbBtn"); o.className = "orb" + (p === "listening" || p === "thinking" || p === "speaking" ? " " + p : "");
-  $("phase").firstChild.textContent = PHASES[p] || "";
+  $("phase").firstChild.textContent = PHASES[p] || ""; $("phase").classList.toggle("live", p === "listening");
   $("phase").querySelector("small").textContent = note || (p === "listening" ? "Speak German now. Tap to send." : p === "speaking" ? "Tap to interrupt and answer." : p === "paused" ? "Take your time. Tap the button when you're ready to answer." : "");
 }
 $("orbBtn").onclick = () => {
@@ -1502,6 +1551,7 @@ function addWords(list){
   return add.length;
 }
 function renderWords(){
+  renderTime();
   renderHeat("heatBar2", "heatLegend2"); renderGoal("goalBox2");
   const groups = { hot: [], warm: [], cool: [], cold: [] };
   allWords().map(w => [w, warmth(w)]).sort((a, b) => b[1] - a[1]).forEach(([w, t]) => groups[level(t)].push(w));
@@ -1755,11 +1805,13 @@ async function startVocab(){
   while (fi < fresh.length) { list.push({ intro: fresh[fi] }); due.push({ w: fresh[fi].w, at: 0 }); fi++; }
   due.forEach(d => list.push(d.w));
   if (!list.length) { $("vDone").innerHTML = `<p class="lead">No words to practise yet.</p>`; return; }
-  V = { list, i: 0, ok: 0, res: [], tests: list.filter(x => typeof x === "string").length, fresh: fresh.length };
+  V = { list, i: 0, ok: 0, first: 0, res: [], tests: list.filter(x => typeof x === "string").length, fresh: fresh.length };
+  // A Vokabeln round counts as practice for the streak, like a chat.
+  if (!S.days.includes(today())) { S.days = [...S.days.slice(-90), today()]; persist("days"); }
   $("vPlay").hidden = false; $("vDone").hidden = true; vCard();
 }
 function vCard(){
-  const item = V.list[V.i]; V.done = false;
+  const item = V.list[V.i]; V.done = false; V.tries = 0;
   $("vProg").textContent = `${V.i + 1} / ${V.list.length}`; $("vScore").textContent = `${V.ok} richtig`;
   $("vBarFill").style.width = (V.i / V.list.length * 100) + "%";
   $("vRes").hidden = true; $("vType").value = ""; $("vMic").className = "orb";
@@ -1778,7 +1830,7 @@ function vCard(){
   }
   $("vLabel").textContent = "Say it in German"; $("vNext").textContent = "Next";
   $("vEn").textContent = enOf(item); $("vNext").hidden = true; $("vShow").hidden = false;
-  setVPhase("Tap and say it", "");
+  setVPhase("Tap and say it", "You get 5 tries.");
 }
 // Second try after a miss (spoken or typed): shown as corrected, counted as practice, but it doesn't warm the word.
 function vRetry(alts){
@@ -1792,13 +1844,42 @@ function vRetry(alts){
   $("vType").value = ""; setVPhase("Jetzt richtig!", ""); speak(w);
   setTimeout(() => { if (V && V.done && V.list[V.i] === w && current === "vocab") vNext(); }, 2200);
 }
-function vJudge(alts){ if (!V || V.done) return; const target = V.list[V.i]; const ok = alts.some(a => matches(a, target)); vResult(ok, alts[0] || ""); }
+// How close an answer is: 1 = the same word, 0 = nothing alike (letters folded, article ignored).
+function closeness(said, target){
+  const a = fold(said), b = fold(target); if (!a || !b) return 0;
+  if (b.includes(" ") && a.split(" ").some(x => b.split(" ").includes(x) && x.length > 2)) return Math.max(0.6, 1 - lev(a, b) / Math.max(a.length, b.length));
+  const best = Math.max(...[a, ...a.split(" ")].map(x => 1 - lev(x, b) / Math.max(x.length, b.length)));
+  return best;
+}
+const V_TRIES = 5;
+// Up to 5 tries before the answer is shown; close answers are told they're close. After the 3rd miss a letter hint appears.
+function vJudge(alts){
+  if (!V || V.done) return;
+  const target = V.list[V.i], ok = alts.some(a => matches(a, target));
+  V.tries = (V.tries || 0) + 1;
+  if (ok) { vResult(true, alts[0] || ""); return; }
+  if (V.tries >= V_TRIES) { vResult(false, alts[0] || ""); return; }
+  const near = Math.max(0, ...alts.map(a => closeness(a, target))), said = alts[0] || "";
+  const left = V_TRIES - V.tries, r = $("vRes"); r.hidden = false;
+  const head = near >= 0.75 ? "Sehr nah! So close" : near >= 0.5 ? "Fast! You're close" : "Nicht ganz · not quite";
+  const tip = near >= 0.75 ? "Just a letter or two off." : near >= 0.5 ? "Part of it is right. Check the spelling or ending." : "Try another word.";
+  const word = String(target), hint = V.tries >= 3 ? word.split("").map((c, i) => i === 0 || c === " " || c === "-" || (V.tries >= 4 && i === word.length - 1) ? c : "_").join(" ") : "";
+  r.className = "vres " + (near >= 0.5 ? "near" : "far");
+  r.innerHTML = `${head}${said ? `<small>You said “${esc(said)}”. ${tip}</small>` : ""}${hint ? `<span class="vhint" lang="de" aria-label="Hint: starts with ${esc(word[0])}">${esc(hint)}</span>` : ""}<span class="vtry">${left} ${left === 1 ? "try" : "tries"} left</span>`;
+  setVPhase(near >= 0.5 ? "Fast! Try again" : "Try again", `${left} ${left === 1 ? "try" : "tries"} left · tap and say it, or fix what you typed.`);
+  $("vMic").className = "orb";
+  const ti = $("vType"); if (ti.value) { ti.focus(); ti.select(); }
+}
 function vResult(ok, said){
   if (V.done) return; V.done = true;
-  const w = V.list[V.i]; bump(w, ok ? "vo" : "vm"); persist("stats");
-  V.res.push({ w, ok }); if (ok) V.ok++;
+  const w = V.list[V.i], tries = Math.max(1, V.tries || 1);
+  // Right first time warms the word fully; right after a few tries warms it a little; giving up or 5 misses cools it.
+  if (ok) bump(w, "vo", tries === 1 ? 1 : 0.4); else bump(w, "vm");
+  persist("stats");
+  V.res.push({ w, ok, tries }); if (ok) V.ok++; if (ok && tries === 1) V.first++;
   const r = $("vRes"); r.hidden = false; r.className = "vres " + (ok ? "ok" : "no");
-  r.innerHTML = ok ? `Richtig!<b lang="de">${esc(w)}</b>` : `It's<b lang="de">${esc(w)}</b>${said ? `<small>You said “${esc(said)}”</small>` : ""}`;
+  const nth = ["", "", "2nd", "3rd", "4th", "5th"][tries] || tries + "th";
+  r.innerHTML = ok ? `Richtig!<b lang="de">${esc(w)}</b>${tries > 1 ? `<small>On the ${nth} try</small>` : ""}` : `It's<b lang="de">${esc(w)}</b>${said ? `<small>You said “${esc(said)}”</small>` : ""}`;
   $("vScore").textContent = `${V.ok} richtig`; $("vShow").hidden = true; $("vNext").hidden = false; $("vMic").className = "orb";
   setVPhase(ok ? "Gut gemacht" : "Listen and repeat", ok ? "" : "Say it or type it once more.");
   if (!ok) $("vType").value = "";
@@ -1810,10 +1891,10 @@ function vNext(){
   if (V.i < V.list.length) { vCard(); return; }
   $("vBarFill").style.width = "100%"; $("vPlay").hidden = true; $("vDone").hidden = false;
   const fixedN = V.res.filter(r => r.fixed).length, cg = currentGoal();
-  const ac = achCounts(); ac.vRounds++; if (V.res.length >= 10 && V.ok === V.res.length) ac.perfect++; persist("counts");
-  $("vDone").innerHTML = `<h2>${V.ok} of ${V.res.length} richtig${fixedN ? ` · ${fixedN} corrected` : ""}</h2><p class="lead">Words you got right first time warm up. Words you missed cool down and come back sooner, even if you corrected them.${V.fresh ? ` ${V.fresh} new word${V.fresh === 1 ? "" : "s"} added to My words.` : ""}</p>
+  const ac = achCounts(); ac.vRounds++; if (V.res.length >= 10 && V.first === V.res.length) ac.perfect++; persist("counts");
+  $("vDone").innerHTML = `<h2>${V.ok} of ${V.res.length} richtig${fixedN ? ` · ${fixedN} corrected` : ""}</h2><p class="lead">Right first time warms a word most; right after a few tries warms it a little. Words you missed cool down and come back sooner, even if you corrected them.${V.fresh ? ` ${V.fresh} new word${V.fresh === 1 ? "" : "s"} added to My words.` : ""}</p>
     <p class="lead" style="margin-top:-6px"><b>Ziel ${cg.g.id}:</b> ${cg.st.learned} of ${cg.st.total} learned · ${cg.st.started} started</p>
-    <div class="card vlist">${V.res.map(r => `<div><span lang="de">${esc(r.w)}</span><span>${esc(enOf(r.w))} ${r.ok ? "✓" : r.fixed ? `<span class="vfix">corrected ✓</span>` : "✗"}</span></div>`).join("")}</div>
+    <div class="card vlist">${V.res.map(r => `<div><span lang="de">${esc(r.w)}</span><span>${esc(enOf(r.w))} ${r.ok ? (r.tries > 1 ? `<span class="vfix">✓ ${["", "", "2nd", "3rd", "4th", "5th"][r.tries]} try</span>` : "✓") : r.fixed ? `<span class="vfix">corrected ✓</span>` : "✗"}</span></div>`).join("")}</div>
     <div class="links"><button class="send" id="vAgain">Another round</button><button class="ghost" id="vHome">Home</button></div>`;
   $("vAgain").onclick = startVocab; $("vHome").onclick = () => show("home");
 }
@@ -1828,8 +1909,8 @@ $("vMic").onclick = () => {
   vrec.onresult = e => { got = true; const alts = [...e.results[0]].map(a => a.transcript);
     if (retry) vRetry(alts); else vJudge(alts); };
   vrec.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") setVPhase("Microphone blocked", "Allow the microphone for this site in Chrome."); };
-  vrec.onend = () => { vListening = false; $("vMic").classList.remove("listening"); if (!got && !V.done) setVPhase("Didn't catch that", "Tap the mic and try again, or type it."); };
-  try { vrec.start(); vListening = true; $("vMic").classList.add("listening"); setVPhase("Ich höre zu…", "Say the German word."); } catch { setVPhase("Couldn't start the mic", "Tap again."); }
+  vrec.onend = () => { vListening = false; $("vMic").classList.remove("listening"); $("vPhase").classList.remove("live"); if (!got && !V.done) setVPhase("Didn't catch that", "Tap the mic and try again, or type it."); };
+  try { vrec.start(); vListening = true; $("vMic").classList.add("listening"); $("vPhase").classList.add("live"); setVPhase("Ich höre zu…", "Mic is on · say the German word."); } catch { setVPhase("Couldn't start the mic", "Tap again."); }
 };
 $("vCheck").onclick = () => {
   const t = $("vType").value.trim();
