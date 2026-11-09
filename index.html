@@ -571,7 +571,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.3.0";
+const VERSION = "2.3.1";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -1345,7 +1345,7 @@ function renderHeat(barId, legendId){
   $(legendId).innerHTML = order.map(k => `<span style="--c:${HEAT[k].c}">${HEAT[k].label} ${h[k]}</span>`).join("");
 }
 /* ---------- Android home-screen widget (only inside the Lena Android app) ---------- */
-// The app opens a message channel; Lena sends the streak, practice days and a week of "words of the day".
+// The app opens a message channel; Lena sends how warm your words are (hot/warm/cool/cold) and a week of "words of the day".
 window.addEventListener("message", e => {
   const p = e.ports && e.ports[0];
   if (!p || e.data !== "lena-widget") return;
@@ -1366,7 +1366,7 @@ function sendWidget(){
   if (!widgetPort) return;
   try {
     const h = heatCounts();
-    widgetPort.postMessage(JSON.stringify({ v: 1, day: today(), days: S.days.slice(-120), warm: h.warm + h.hot, total: allWords().length, sessions: S.sessions, words: widgetWords() }));
+    widgetPort.postMessage(JSON.stringify({ v: 2, day: today(), days: S.days.slice(-120), heat: h, warm: h.warm + h.hot, total: allWords().length, sessions: S.sessions, words: widgetWords() }));
   } catch {}
 }
 function focusWords(n = 8){
