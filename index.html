@@ -620,8 +620,12 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
     <div class="sgroup">
       <div class="srow"><label for="voice">German voice</label><select id="voice"></select></div>
       <div class="srow"><label for="rate">Speed <small id="rateOut"></small></label><input type="range" id="rate" min="0.5" max="1.2" step="0.05"></div>
+      <div class="srow"><label for="voiceOut">Lena's voice</label><select id="voiceOut"><option value="auto">Automatic</option><option value="phone">Phone voice</option><option value="ai">Lena's AI voice</option></select></div>
       <div class="srow"><span>Hear a sample</span><button class="ghost" id="voiceTest">Test voice</button></div>
+      <div class="srow"><span>Voice not working?</span><button class="ghost" id="voiceCheck">Voice check</button></div>
     </div>
+    <small class="hint">Automatic uses the phone's voice and switches to Lena's AI voice (Gemini, uses your key) if the phone's voice doesn't speak.</small>
+    <div class="card" id="voiceCheckOut" hidden style="margin-top:10px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,Menlo,monospace"></div>
     <small class="hint">No German voice listed? Phone Settings → Text-to-speech → Google → Install voice data → Deutsch.</small>
 
     <p class="label">Conversation</p>
@@ -707,7 +711,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.5.4";
+const VERSION = "2.6.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -741,7 +745,7 @@ const store = {
 const DEFAULTS = {
   provider: "gemini", key: "", level: "A1", voice: "", rate: 0.9, autoSpeak: true, autoSend: false, autoListen: false, theme: "light",
   seeded: false, recentStories: [], model: "", adv: false, added: [], mistakes: [], days: [], sessions: 0, recentTopics: [],
-  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}, newPerRound: 3,
+  stats: {}, en: {}, onboarded: false, placement: null, chat: null, hear: "ai", prefsV2: false, interests: {}, newPerRound: 3, voiceOut: "auto",
   ach: {}, achInit: false, time: { total: 0, days: {} }, counts: { voice: 0, stories: 0, newsDays: [], vRounds: 0, perfect: 0 }
 };
 const S = {}; Object.keys(DEFAULTS).forEach(k => S[k] = store.get(k, structuredClone(DEFAULTS[k])));
@@ -1005,38 +1009,120 @@ document.addEventListener("pointerdown", unlockAudio, { once: true });
 // after cancel() is often dropped), resume() if speech got stuck paused, and one retry if nothing starts within ~2 s.
 // Each call gets a number, so a stopped or replaced line never finishes or speaks late.
 let speakSeq = 0;
-function stopSpeak(){ speakSeq++; try { speechSynthesis.cancel(); } catch {} releaseNative(); }
+function stopSpeak(){ speakSeq++; try { speechSynthesis.cancel(); } catch {} releaseNative(); try { if (typeof aiPlayer !== "undefined" && aiPlayer) { aiPlayer.pause(); aiPlayer = null; } } catch {} }
 function releaseNative(){ try { if (typeof natPlayer !== "undefined" && natPlayer) { natPlayer.pause(); natPlayer.removeAttribute("src"); natPlayer.load(); natPlayer = null; } } catch {} }
+/* Lena's voice. Three ways to speak, tried in order until one works on this phone:
+   1. the phone's German voice as chosen in Settings, 2. the phone's speech with just "German" (no particular voice),
+   3. Lena's AI voice: Gemini text-to-speech with your key, played as audio (audio playback works even when the
+   phone's speech engine doesn't). What failed and why is kept for Settings → Voice check. */
+const voiceLog = [];   // last events, for the voice check
+function vlog(msg){ voiceLog.push(new Date().toLocaleTimeString() + " " + msg); if (voiceLog.length > 30) voiceLog.shift(); }
+let phoneVoiceFails = 0;   // full failures this session (both ways); after one, the AI voice takes over for the session (when there is a key)
+const aiVoiceOK = () => !!S.key && S.provider === "gemini";
+const voiceMode = () => S.voiceOut === "ai" && aiVoiceOK() ? "ai" : S.voiceOut === "phone" || !aiVoiceOK() ? "phone" : (phoneVoiceFails >= 1 ? "ai" : "phone");
 function speak(text, rate, onEnd){
-  const fin0 = () => { onEnd && onEnd(); };
-  if (!("speechSynthesis" in window) || !text) { fin0(); return; }
-  const seq = ++speakSeq, clean = String(text).replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
-  if (!clean) { fin0(); return; }
-  let done = false, started = false, tries = 0, wd = null;
-  const fin = () => { if (done) return; done = true; clearTimeout(wd); onEnd && onEnd(); };
+  const clean = String(text || "").replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+  if (!clean) { onEnd && onEnd(); return; }
+  const seq = ++speakSeq;
+  let done = false; const fin = () => { if (done) return; done = true; onEnd && onEnd(); };
   releaseNative();
+  if (voiceMode() === "ai") { aiSpeak(clean, rate, seq).then(ok => { if (ok || seq !== speakSeq) fin(); else phoneSpeak(clean, rate, seq, 0, fin); }); return; }
+  phoneSpeak(clean, rate, seq, 0, ok => {
+    if (ok || seq !== speakSeq || !aiVoiceOK() || S.voiceOut === "phone") { fin(); return; }
+    // The phone's speech didn't work: say it with Lena's AI voice instead.
+    if (!voiceToastShown) { voiceToastShown = true; toast("The phone's voice isn't working, so Lena is using her AI voice"); }
+    aiSpeak(clean, rate, seq).then(() => fin());
+  });
+}
+let voiceToastShown = false;
+// variant 0: chosen German voice · 1: just lang de-DE. Calls back with true if it spoke, false if it failed.
+function phoneSpeak(clean, rate, seq, variant, cb){
+  if (!("speechSynthesis" in window)) { vlog("phone speech: not available"); phoneVoiceFails++; cb(false); return; }
+  let settled = false, started = false, wd = null;
+  const settle = ok => { if (settled) return; settled = true; clearTimeout(wd);
+    if (ok) { phoneVoiceFails = 0; cb(true); return; }
+    if (seq !== speakSeq) { cb(true); return; }   // stopped on purpose: not a failure
+    if (variant === 0) { phoneSpeak(clean, rate, seq, 1, cb); return; }
+    phoneVoiceFails++; cb(false); };
   try { const ss = speechSynthesis; if (ss.speaking || ss.pending) ss.cancel(); if (ss.paused) ss.resume(); } catch {}
-  const go = () => {
-    if (seq !== speakSeq) { fin(); return; }   // replaced by a newer line or stopped
+  setTimeout(() => {
+    if (seq !== speakSeq) { settle(true); return; }
     try {
       const u = new SpeechSynthesisUtterance(clean);
-      u.lang = "de-DE"; u.rate = rate || S.rate;
-      const v = germanVoice(); if (v) u.voice = v;
-      const mine = tries;
+      u.lang = "de-DE"; const r = +(rate || S.rate); u.rate = isFinite(r) && r > 0 ? Math.min(2, Math.max(0.3, r)) : 0.9;
+      const v = variant === 0 ? germanVoice() : null; if (v) u.voice = v;
       u.onstart = () => { started = true; };
-      u.onend = () => { if (mine === tries) fin(); };
-      u.onerror = () => { if (mine === tries) fin(); };
+      u.onend = () => settle(true);
+      u.onerror = e => { const code = (e && e.error) || "error"; vlog(`phone speech ${variant ? "(no voice set)" : "(" + (v ? v.name : "default") + ")"}: ${code}`);
+        settle(code === "interrupted" || code === "canceled"); };
       speechSynthesis.speak(u);
       if (speechSynthesis.paused) speechSynthesis.resume();
-      clearTimeout(wd);
       wd = setTimeout(() => {
-        if (done || started || seq !== speakSeq) return;
-        if (speechSynthesis.speaking && !speechSynthesis.paused) return;   // it is talking, just without a start event
-        if (tries++ < 1) { try { speechSynthesis.cancel(); speechSynthesis.resume(); } catch {} setTimeout(go, 120); } else fin();
-      }, 2000);
-    } catch { fin(); }
-  };
-  setTimeout(go, 60);
+        if (settled || started) return;
+        if (speechSynthesis.speaking && !speechSynthesis.paused) { wd = setTimeout(() => settle(true), Math.max(6000, clean.length * 110)); return; }   // talking without a start event: don't wait forever
+        vlog(`phone speech ${variant ? "(no voice set)" : "(" + (v ? v.name : "default") + ")"}: nothing started in 2.5 s`);
+        try { speechSynthesis.cancel(); } catch {} settle(false);
+      }, 2500);
+    } catch (e) { vlog("phone speech threw: " + (e && e.message)); settle(false); }
+  }, 60);
+}
+/* Lena's AI voice: Gemini text-to-speech. The model is found from your key's model list once a day. Clips are kept
+   for this session so Play / Slow don't use another request. */
+const aiClips = new Map();
+let aiTtsModel = null;
+async function ttsModel(){
+  if (aiTtsModel) return aiTtsModel;
+  const c = store.get("ttsModel", null); if (c && c.day === today() && c.m) return (aiTtsModel = c.m);
+  let m = "gemini-2.5-flash-preview-tts";
+  try {
+    const j = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(S.key)}`).then(r => r.json());
+    const names = (j.models || []).filter(x => /tts/i.test(x.name) && (x.supportedGenerationMethods || ["generateContent"]).includes("generateContent")).map(x => x.name.replace(/^models\//, ""));
+    m = names.find(n => /flash/i.test(n) && !/preview/i.test(n)) || names.find(n => /flash/i.test(n)) || names[0] || m;
+  } catch {}
+  store.set("ttsModel", { day: today(), m }); return (aiTtsModel = m);
+}
+function pcmToWav(b64, rateHz){
+  const bin = atob(b64), n = bin.length, buf = new ArrayBuffer(44 + n), dv = new DataView(buf), w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); dv.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, rateHz, true); dv.setUint32(28, rateHz * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, n, true);
+  const out = new Uint8Array(buf, 44); for (let i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+}
+async function aiClip(clean){
+  if (aiClips.has(clean)) return aiClips.get(clean);
+  const model = await ttsModel(); countRequest(model);
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(S.key)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: ctl.signal,
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: clean }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } } })
+    });
+    const j = await r.json();
+    if (!r.ok) { if (r.status === 404) store.set("ttsModel", null), aiTtsModel = null; throw new Error((j.error && j.error.message) || "HTTP " + r.status); }
+    const part = (j.candidates?.[0]?.content?.parts || []).find(x => x.inlineData && x.inlineData.data);
+    if (!part) throw new Error("no audio in reply");
+    const mt = part.inlineData.mimeType || "", hz = +((mt.match(/rate=(\d+)/) || [])[1] || 24000);
+    const url = /wav|mpeg|mp3|ogg/.test(mt) ? URL.createObjectURL(new Blob([Uint8Array.from(atob(part.inlineData.data), ch => ch.charCodeAt(0))], { type: mt })) : pcmToWav(part.inlineData.data, hz);
+    if (aiClips.size > 60) { const [k, v] = aiClips.entries().next().value; URL.revokeObjectURL(v); aiClips.delete(k); }
+    aiClips.set(clean, url); return url;
+  } finally { clearTimeout(t); }
+}
+let aiPlayer = null, aiQuotaToast = false;
+function aiSpeak(clean, rate, seq){
+  return new Promise(async res => {
+    try {
+      const url = await aiClip(clean);
+      if (seq !== speakSeq) { res(true); return; }
+      const a = new Audio(url); aiPlayer = a;
+      const r = +(rate || S.rate); a.playbackRate = isFinite(r) && r > 0 ? Math.min(1.4, Math.max(0.6, r / 0.95)) : 1;
+      let ok = false; const end = v => { if (aiPlayer === a) aiPlayer = null; res(v); };
+      a.onended = () => end(true); a.onerror = () => { vlog("AI voice: couldn't play the audio"); end(ok); };
+      a.onplaying = () => { ok = true; };
+      await a.play();
+    } catch (e) { const m = String(e && e.message || e); vlog("AI voice: " + m);
+      if (/quota|exhausted|429|rate/i.test(m) && !aiQuotaToast) { aiQuotaToast = true; toast("Lena's AI voice has reached today's free limit"); }
+      res(false); }
+  });
 }
 // Speech sometimes stays stuck after the app was in the background; give it a nudge when Lena comes back.
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { try { if (speechSynthesis.paused) speechSynthesis.resume(); } catch {} } });
@@ -1656,7 +1742,7 @@ function renderSettings(){
   $("provider").value = S.provider; $("apiKey").value = S.key; $("keyHelp").textContent = KEY_HELP[S.provider];
   $("newPerRound").value = String(S.newPerRound ?? 3);
   $("level").value = S.level; $("rate").value = S.rate; $("rateOut").textContent = (+S.rate).toFixed(2) + "×";
-  $("hear").value = S.hear; $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
+  $("hear").value = S.hear; $("voiceOut").value = S.voiceOut || "auto"; $("autoSpeak").checked = S.autoSpeak; $("autoSend").checked = S.autoSend; $("autoListen").checked = S.autoListen; $("testOut").textContent = "";
   renderVoiceList(); renderAccount(); applyTheme(S.theme); renderUsage();
 }
 $("provider").onchange = () => { S.provider = $("provider").value; S.model = ""; persist("provider"); persist("model"); $("keyHelp").textContent = KEY_HELP[S.provider]; };
@@ -1677,7 +1763,54 @@ $("autoSend").onchange = () => { S.autoSend = $("autoSend").checked; persist("au
 $("themeSeg").onclick = e => { const b = e.target.closest("[data-theme]"); if (!b) return; S.theme = b.dataset.theme; persist("theme"); applyTheme(S.theme); };
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyTheme(S.theme));
 $("autoListen").onchange = () => { S.autoListen = $("autoListen").checked; persist("autoListen"); };
-$("voiceTest").onclick = () => speak("Hallo! Ich bin Lena. Wie geht es dir?");
+$("voiceTest").onclick = () => { unlockAudio(); speak("Hallo! Ich bin Lena. Wie geht es dir?"); };
+$("voiceOut").onchange = () => { S.voiceOut = $("voiceOut").value; persist("voiceOut"); phoneVoiceFails = 0; };
+// Voice check: tries each way of speaking on its own and reports exactly what happened, to copy or screenshot.
+function sayOnce(opts){
+  return new Promise(res => {
+    const t0 = Date.now(), ev = []; let fin = false; const end = r => { if (fin) return; fin = true; res({ ...r, ev, ms: Date.now() - t0 }); };
+    try {
+      speechSynthesis.cancel();
+      setTimeout(() => {
+        try {
+          const u = new SpeechSynthesisUtterance(opts.text);
+          if (opts.lang) u.lang = opts.lang; if (opts.voice) u.voice = opts.voice; u.rate = 0.9;
+          u.onstart = () => ev.push("start " + (Date.now() - t0) + "ms");
+          u.onend = () => { ev.push("end " + (Date.now() - t0) + "ms"); end({ ok: ev.some(x => x.startsWith("start")) || true }); };
+          u.onerror = e => { ev.push("error: " + (e.error || "?")); end({ ok: false }); };
+          speechSynthesis.speak(u);
+          setTimeout(() => { ev.push(`after 4 s: speaking=${speechSynthesis.speaking} pending=${speechSynthesis.pending} paused=${speechSynthesis.paused}`); end({ ok: false }); }, 4000);
+        } catch (e) { ev.push("threw: " + e.message); end({ ok: false }); }
+      }, 150);
+    } catch (e) { ev.push("threw: " + e.message); end({ ok: false }); }
+  });
+}
+$("voiceCheck").onclick = async () => {
+  unlockAudio(); stopSpeak();
+  const out = $("voiceCheckOut"); out.hidden = false; const lines = [];
+  const show = () => { out.textContent = lines.join("\n"); };
+  const ua = navigator.userAgent, chrome = (ua.match(/Chrome\/([\d.]+)/) || [])[1] || "?";
+  lines.push(`Lena ${VERSION}${IN_APP ? " · app " + APP_VERSION_NAME : " · browser"} · Chrome ${chrome}`, `Android ${(ua.match(/Android ([\d.]+)/) || [])[1] || "?"} · ${new Date().toLocaleString()}`);
+  if (!("speechSynthesis" in window)) { lines.push("Phone speech: NOT AVAILABLE in this browser"); show(); }
+  else {
+    let all = speechSynthesis.getVoices();
+    if (!all.length) { await new Promise(r => setTimeout(r, 1200)); all = speechSynthesis.getVoices(); }
+    const de = all.filter(v => /^de/i.test(v.lang)), chosen = germanVoice();
+    lines.push(`Voices: ${all.length} in total, ${de.length} German`);
+    de.slice(0, 8).forEach(v => lines.push(`  · ${v.name} [${v.lang}]${v.localService ? " on-phone" : " online"}${v.default ? " default" : ""}${chosen && v.voiceURI === chosen.voiceURI ? "  ← Lena uses" : ""}`));
+    lines.push(`State: speaking=${speechSynthesis.speaking} pending=${speechSynthesis.pending} paused=${speechSynthesis.paused}`);
+    lines.push(`Setting: ${S.voiceOut || "auto"} · read aloud ${S.autoSpeak ? "on" : "off"} · speed ${S.rate}`); show();
+    const tests = [["A", "chosen German voice", { text: "Eins.", lang: "de-DE", voice: chosen }], ["B", "German, no voice set", { text: "Zwei.", lang: "de-DE" }], ["C", "phone default (no language)", { text: "drei" }]];
+    for (const [k, name, o] of tests) { lines.push(`Test ${k} (${name}): …`); show(); const r = await sayOnce(o); lines[lines.length - 1] = `Test ${k} (${name}): ${r.ev.join(", ") || "no events"}`; show(); }
+  }
+  if (aiVoiceOK()) {
+    lines.push("Test D (Lena's AI voice): …"); show();
+    try { const m = await ttsModel(); const t0 = Date.now(); aiClips.delete("Vier."); const ok = await aiSpeak("Vier.", 0.9, speakSeq); lines[lines.length - 1] = `Test D (Lena's AI voice, ${m}): ${ok ? "played" : "failed"} in ${Date.now() - t0} ms`; }
+    catch (e) { lines[lines.length - 1] = "Test D (Lena's AI voice): " + e.message; }
+  } else lines.push("Test D (Lena's AI voice): needs a Gemini key");
+  if (voiceLog.length) lines.push("Recent voice problems:", ...voiceLog.slice(-8).map(x => "  " + x));
+  lines.push("You should have heard: Eins, Zwei, drei, Vier."); show();
+};
 $("testBtn").onclick = async () => {
   S.key = $("apiKey").value.trim(); S.model = ""; persist("key"); persist("model");
   if (!S.key) { $("testOut").textContent = "Paste a key first."; return; }
