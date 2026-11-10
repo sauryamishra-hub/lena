@@ -331,6 +331,14 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .appupd p{margin:0;flex:1;font-size:14px;line-height:1.3}.appupd b{display:block;font-size:15px}
 .appupd a{background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:700;padding:9px 12px;font-size:14px;white-space:nowrap}
 .appupd button{background:none;border:0;color:var(--muted);font-size:13px;padding:6px 2px;cursor:pointer}
+.guide{position:fixed;inset:0;z-index:58;background:rgba(12,12,14,.6);display:flex;align-items:flex-end;justify-content:center;animation:vtFade .2s ease-out}
+.guide .gbox{background:var(--surface);color:var(--ink);width:100%;max-width:560px;border-top:6px solid var(--gold);padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));max-height:90vh;overflow-y:auto}
+.guide h3{margin:0 0 4px;font-size:24px;letter-spacing:-.02em}
+.guide p{margin:0 0 12px;color:var(--muted);font-size:15px}
+.guide ol{margin:0 0 16px;padding-left:22px;font-size:16px;line-height:1.45}
+.guide li{margin-bottom:8px}.guide li b{color:var(--ink)}
+.guide .gbig{display:block;text-align:center;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:800;font-size:18px;padding:14px;margin:6px 0 10px}
+.guide .grow{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:45;background:var(--ink);color:var(--bg);padding:12px 16px;font-weight:600;font-size:15px;animation:vtUp .25s ease-out}
 .learnta{width:100%;box-sizing:border-box;border:var(--bw) solid var(--line);background:var(--surface);color:var(--ink);padding:10px 12px;font:inherit;font-size:16px;resize:vertical}
 #shotOut .card{margin-top:10px}
@@ -711,7 +719,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.6.0";
+const VERSION = "2.7.0";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -753,6 +761,7 @@ const SYNCED = ["theme","onboarded","placement","autoListen","seeded","added","m
 let userRef = null, syncTimer = null;
 const WIDGET_KEYS = ["days", "stats", "added", "sessions", "level"];
 let widgetPort = null, widgetTimer = null;
+let widgetTokens = [], cloudTimer = null;   // widget codes (see widgetCloudNow)
 let achT = null, achReady = false;
 // Everything that matters is saved to the account (Firestore), so uninstalling or changing phones loses nothing.
 const persist = k => { store.set(k, S[k]); if (WIDGET_KEYS.includes(k)) widgetSoon(); if (["stats","days","sessions","added","counts"].includes(k)) achSoon(); if (SYNCED.includes(k)) { store.set("updatedAt", Date.now()); if (userRef) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); } } };
@@ -1864,7 +1873,7 @@ window.addEventListener("message", e => {
   if (!p || e.data !== "lena-widget") return;
   widgetPort = p; p.onmessage = () => {}; sendWidget();
 });
-function widgetSoon(){ if (!widgetPort) return; clearTimeout(widgetTimer); widgetTimer = setTimeout(sendWidget, 1500); }
+function widgetSoon(){ if (!widgetPort && !widgetTokens.length) return; clearTimeout(widgetTimer); widgetTimer = setTimeout(sendWidget, 1500); }
 // 20 words for the widget (word of the day + refresh): useful words you know but haven't used lately, mixed with good next new words. Fixed for the day.
 function widgetWords(){
   const saved = store.get("widgetWords", null);
@@ -1880,8 +1889,30 @@ function widgetPayload(){
   return JSON.stringify({ v: 3, day: today(), level: S.level, heat: h, warm: h.warm + h.hot, total: allWords().length, sessions: S.sessions, words: widgetWords() });
 }
 function sendWidget(){
-  if (!widgetPort) return;
-  try { widgetPort.postMessage(widgetPayload()); } catch {}
+  if (widgetPort) { try { widgetPort.postMessage(widgetPayload()); } catch {} }
+  widgetCloudSoon();
+}
+/* The widget also fetches its numbers itself (refresh button, every 30 min): Lena saves the widget's data — word counts
+   and the 20 words of the day, nothing else — to widgets/{code} in the account database. The code is made by the app on
+   the phone (secret, unguessable) and passed in as wt=. Every phone's code is kept in the account, so progress made on
+   any device reaches every widget. */
+const WT_RE = /^[A-Za-z0-9_-]{22,64}$/;
+const urlWt = new URLSearchParams(location.search).get("wt");
+if (urlWt && WT_RE.test(urlWt)) store.set("widgetToken", urlWt);
+function widgetCloudSoon(){ if (!userRef || !widgetTokens.length) return; clearTimeout(cloudTimer); cloudTimer = setTimeout(widgetCloudNow, 2500); }
+function widgetCloudNow(){
+  if (!userRef || !fbDb || !me || !widgetTokens.length) return;
+  const json = widgetPayload(), key = widgetTokens.join(",") + "|" + json;
+  if (store.get("widgetCloudLast", "") === key) return;
+  Promise.all(widgetTokens.map(t => fbDb.collection("widgets").doc(t).set({ json, at: Date.now(), uid: me.uid })))
+    .then(() => store.set("widgetCloudLast", key)).catch(() => {});
+}
+// After sign-in: remember this phone's widget code in the account and pick up the other phones' codes.
+function widgetTokensFrom(d){
+  const mine = store.get("widgetToken", null);
+  const list = [...new Set([...(Array.isArray(d && d.widgetTokens) ? d.widgetTokens : []), ...(mine ? [mine] : [])])].filter(t => WT_RE.test(t)).slice(-5);
+  widgetTokens = list;
+  if (mine && userRef && !(d && Array.isArray(d.widgetTokens) && d.widgetTokens.includes(mine))) userRef.set({ widgetTokens: list }, { merge: true }).catch(() => {});
 }
 // Backup route when the message channel isn't there: hand the data to the app through a lena:// link (needs a tap, so it runs on Finish).
 const IN_APP = /[?&]app=android/.test(location.search) || document.referrer.startsWith("android-app://io.github.sauryamishra.lena");
@@ -1894,7 +1925,8 @@ const APP_VERSION_NAME = !IN_APP ? "" : new URLSearchParams(location.search).get
 $("ver1").textContent = "v" + VERSION + (IN_APP ? " · app " + APP_VERSION_NAME : "");
 $("verWeb").textContent = "Lena " + VERSION;
 if (IN_APP) { $("verApp").hidden = false; $("verApp").textContent = "Android app " + APP_VERSION_NAME; $("appUpdBtn").hidden = false; }
-$("appUpdBtn").onclick = async () => { const r = await checkAppUpdate(true); if (r === "latest") toast("You have the latest Lena app"); else if (r === "error") toast("Couldn't check right now"); };
+else if (/Android/i.test(navigator.userAgent)) { $("appUpdBtn").hidden = false; $("appUpdBtn").textContent = "Get the Lena app (widgets)"; }
+$("appUpdBtn").onclick = async () => { if (!IN_APP) { appGuide("get"); return; } const r = await checkAppUpdate(true); if (r === "latest") toast("You have the latest Lena app"); else if (r === "error") toast("Couldn't check right now"); };
 async function checkAppUpdate(force){
   if (!IN_APP) return;
   try {
@@ -1905,14 +1937,51 @@ async function checkAppUpdate(force){
     if (document.querySelector(".appupd")) return "shown";
     if (!force && skip && skip.code === v.versionCode && Date.now() < skip.until) return "later";
     const d = document.createElement("div"); d.className = "appupd"; d.setAttribute("role", "status");
-    d.innerHTML = `<p><b>New Lena app ${esc(v.versionName)}</b>${esc(v.notes || "Tap Update, then install it over this one. Your progress stays.")}</p><a href="${esc(v.url)}">Update</a><button type="button">Later</button>`;
+    d.innerHTML = `<p><b>New Lena app ${esc(v.versionName)}</b>${esc(v.notes || "Install it over this one. Your progress stays.")}</p><a href="#" role="button">Update</a><button type="button">Later</button>`;
     d.querySelector("button").onclick = () => { store.set("appUpdSkip", { code: v.versionCode, until: Date.now() + 3 * 86400000 }); d.remove(); };
-    d.querySelector("a").onclick = () => setTimeout(() => d.remove(), 500);
+    d.querySelector("a").onclick = e => { e.preventDefault(); d.remove(); appGuide("update", v); };
     document.body.appendChild(d);
     return "shown";
   } catch { return "error"; }
 }
-setTimeout(checkAppUpdate, 2500);
+// One guide for getting or updating the Android app (the part that gives you the home-screen widgets).
+// Lena herself (chats, words, everything else) updates on her own, in the app and in Chrome alike.
+const APK_URL = "https://sauryamishra-hub.github.io/lena/lena.apk";
+function appGuide(kind, v){
+  document.querySelector(".guide")?.remove();
+  const url = (v && v.url) || APK_URL, name = v && v.versionName ? " " + v.versionName : "";
+  const g = document.createElement("div"); g.className = "guide"; g.setAttribute("role", "dialog");
+  g.innerHTML = `<div class="gbox">
+    <h3>${kind === "update" ? `Update the Lena app${esc(name)}` : "Get the Lena app"}</h3>
+    <p>${kind === "update" ? "Only the app part changes (widgets). Your words, chats and progress stay." : "The app gives you Lena full-screen and the home-screen widgets. Same Lena, same progress."}</p>
+    <ol>
+      <li>Tap <b>Download</b> below.</li>
+      <li>When it's downloaded, tap <b>Open</b> (or open <b>lena…apk</b> from your notifications / Downloads).</li>
+      <li>Tap <b>${kind === "update" ? "Update" : "Install"}</b>. If the phone asks, allow your browser to install apps, then go back and tap it again.</li>
+      <li>Open <b>Lena</b> from its icon${kind === "update" ? "" : ". You can then remove the old Lena shortcut (the one that opens in Chrome)"}.</li>
+      <li>Widgets: long-press the home screen → <b>Widgets</b> → <b>Lena</b>.</li>
+    </ol>
+    <a class="gbig" href="${esc(url)}" id="gDl">Download${esc(name)}</a>
+    <div class="grow"><button class="ghost" id="gClose">${kind === "update" ? "Later" : "Not now"}</button>${kind === "get" ? `<button class="ghost" id="gNever">I already have the app</button>` : ""}</div>
+  </div>`;
+  document.body.appendChild(g);
+  g.onclick = e => { if (e.target === g) g.remove(); };
+  g.querySelector("#gClose").onclick = () => { if (kind === "update" && v) store.set("appUpdSkip", { code: v.versionCode, until: Date.now() + 3 * 86400000 }); else store.set("getAppLater", Date.now()); g.remove(); };
+  const nv = g.querySelector("#gNever"); if (nv) nv.onclick = () => { store.set("getAppNever", true); g.remove(); };
+}
+// In Chrome on an Android phone (not inside the app): offer the app once in a while, so the widgets are easy to find.
+const ON_ANDROID = /Android/i.test(navigator.userAgent);
+function offerApp(){
+  if (IN_APP || !ON_ANDROID || store.get("getAppNever", false)) return;
+  if (Date.now() - store.get("getAppLater", 0) < 7 * 86400000) return;
+  if (document.querySelector(".appupd")) return;
+  const d = document.createElement("div"); d.className = "appupd"; d.setAttribute("role", "status");
+  d.innerHTML = `<p><b>You're in Lena's Chrome shortcut</b>The Lena app has the home-screen widgets.</p><a href="#" role="button">Get the app</a><button type="button">Later</button>`;
+  d.querySelector("button").onclick = () => { store.set("getAppLater", Date.now()); d.remove(); };
+  d.querySelector("a").onclick = e => { e.preventDefault(); d.remove(); appGuide("get"); };
+  document.body.appendChild(d);
+}
+setTimeout(() => { checkAppUpdate(); offerApp(); }, 2500);
 function syncWidgetByLink(){
   if (!IN_APP || widgetPort) return;
   try {
@@ -2524,6 +2593,7 @@ async function onUser(u){
     if (takeServer) { SYNCED.forEach(k => { if (d[k] !== undefined && !(k === "key" && !d[k])) { S[k] = d[k]; store.set(k, d[k]); } }); store.set("updatedAt", d.updatedAt || Date.now()); }
     if (takeServer) mergeAch(localAch, localCounts); else if (d) mergeAch(d.ach, d.counts);
     userRef = ref;
+    widgetTokensFrom(d);
     migratePrefs(); applyTheme(S.theme);
     seedWords();
     if (!d || !takeServer || (!d.key && S.key)) syncNow();
