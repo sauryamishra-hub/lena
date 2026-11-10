@@ -171,6 +171,16 @@ input[type=text],input[type=password],select,textarea{border:var(--bw) solid var
 .wd.sel{background:var(--gold-soft);border-bottom-color:var(--gold)}
 .pop{position:fixed;z-index:50;background:var(--ink);color:var(--bg);padding:8px 12px;font-size:15px;max-width:250px;border-top:4px solid var(--gold);pointer-events:none}
 .pop b{display:block;font-size:12px;font-weight:600;opacity:.7}
+.wsheet{position:fixed;left:0;right:0;bottom:0;z-index:48;background:var(--surface);color:var(--ink);border-top:5px solid var(--gold);box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:vtUp .22s ease-out;max-width:720px;margin:0 auto}
+.wsheet .wtop{display:flex;align-items:flex-start;gap:10px}
+.wsheet .wword{flex:1;min-width:0;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1;overflow-wrap:anywhere}
+.wsheet .wword i{font-style:normal;color:var(--muted);font-size:20px;margin-right:6px;font-weight:600}
+.wsheet .wbase{font-size:14px;color:var(--muted);font-weight:600;margin-top:4px}
+.wsheet .wen{font-family:var(--f-en);font-style:italic;font-size:21px;margin:8px 0 12px;line-height:1.3}
+.wsheet .wx{background:none;border:0;font-size:26px;line-height:1;padding:0 4px;color:var(--muted)}
+.wsheet .wacts{display:flex;gap:8px;flex-wrap:wrap}
+.wsheet .wacts .vsay{margin-top:0}
+.wsheet .wacts .ghost{font-size:14px}
 
 .composer{border-top:var(--bw) solid var(--line);background:var(--bg);padding-block:12px calc(12px + env(safe-area-inset-bottom,0px))}
 .row{display:flex;gap:8px;align-items:flex-end}
@@ -524,7 +534,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
   </main>
 
   <main class="scroll pad" id="news" hidden>
-    <div class="newshead"><div><p class="newsdate" id="newsDate"></p><p class="hint" style="margin:4px 0 0">Today's news in simple German for your level. Tap any word for its meaning.</p></div><button class="ghost" id="newsRefresh">Refresh</button></div>
+    <div class="newshead"><div><p class="newsdate" id="newsDate"></p><p class="hint" style="margin:4px 0 0">Today's news in simple German for your level. Tap any word to hear it and see what it means.</p></div><button class="ghost" id="newsRefresh">Refresh</button></div>
     <div id="newsBody"></div>
   </main>
 
@@ -637,6 +647,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
   </main>
 </div>
 <div class="pop" id="pop" hidden></div>
+<div class="wsheet" id="wSheet" hidden role="dialog" aria-label="Word"></div>
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="achpop" id="achPop" hidden role="dialog" aria-modal="true" aria-labelledby="achKick">
   <div class="rays"></div>
@@ -696,7 +707,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.5.2";
+const VERSION = "2.5.3";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -2260,7 +2271,32 @@ function lookupWord(word){
 function localMeaning(w){ const r = lookupWord(w); return r ? r.en : ""; }
 function localBase(w){ const r = lookupWord(w); return r ? r.base : ""; }
 const glossCache = {};
-function hidePop(){ $("pop").hidden = true; document.querySelectorAll(".wd.sel").forEach(w => w.classList.remove("sel")); }
+function hidePop(){ $("pop").hidden = true; const ws = $("wSheet"); if (ws) ws.hidden = true; document.querySelectorAll(".wd.sel").forEach(w => w.classList.remove("sel")); }
+// News: tapping a word opens a card at the bottom with the meaning, says it aloud (native recording when there is one)
+// and offers to add it to My words.
+const SAY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>`;
+let sheetWord = null;
+function newsSheet(word, base, en){
+  const ws = $("wSheet"), bare = String(base || word).replace(/^(der|die|das) /i, ""), art = (String(base || "").match(/^(der|die|das) /i) || [""])[0].trim();
+  const showBase = bare.toLowerCase() !== word.toLowerCase();
+  const known = allWords().some(w => w.toLowerCase() === bare.toLowerCase());
+  sheetWord = { word, bare, en };
+  ws.innerHTML = `<div class="wtop"><div style="flex:1;min-width:0"><div class="wword" lang="de">${art && !showBase ? `<i>${esc(art)}</i>` : ""}${esc(word)}</div>${showBase ? `<div class="wbase">from <span lang="de">${esc((art ? art + " " : "") + bare)}</span></div>` : ""}</div><button class="wx" id="wsX" aria-label="Close">×</button></div>
+    <div class="wen" id="wsEn">${esc(en || "…")}</div>
+    <div class="wacts"><button class="vsay" id="wsSay">${SAY_ICON}<span id="wsSayT">Hear it</span></button>${showBase ? `<button class="ghost" id="wsSayBase" lang="de">Say “${esc(bare)}”</button>` : ""}${known ? `<span class="hint" style="align-self:center;margin:0">In My words ✓</span>` : `<button class="ghost" id="wsAdd">+ My words</button>`}</div>`;
+  ws.hidden = false;
+  const say = w => { const b = $("wsSay"); if (b) b.classList.add("playing"); playWord(w, Math.max(0.6, S.rate - 0.15)).then(() => { const b2 = $("wsSay"); if (b2) b2.classList.remove("playing"); }); };
+  $("wsX").onclick = hidePop;
+  $("wsSay").onclick = () => say(word);
+  if ($("wsSayBase")) $("wsSayBase").onclick = () => say(bare);
+  if ($("wsAdd")) $("wsAdd").onclick = () => {
+    addWords([bare]); const m = sheetWord && sheetWord.en; if (m && m !== "…" && !enOf(bare)) { S.en[bare] = m; persist("en"); }
+    const st = stat(bare); st.l = (st.l || 0) + 1; st.t = Date.now(); persist("stats");
+    $("wsAdd").outerHTML = `<span class="hint" style="align-self:center;margin:0">Added to My words ✓</span>`;
+  };
+  if (!recording && !listening) { wordTapAt = Date.now(); say(word); }
+  nativeAudio(word).then(n => { if (sheetWord && sheetWord.word === word && $("wsSayT")) $("wsSayT").innerHTML = n && n.u ? `Native speaker <small>· Wiktionary</small>` : `Hear it <small>· phone voice</small>`; });
+}
 function placePop(el, word, en){
   const p = $("pop"); p.innerHTML = `<b lang="de">${esc(word)}</b>${esc(en)}`; p.hidden = false;
   const r = el.getBoundingClientRect(), pw = p.offsetWidth, ph = p.offsetHeight;
@@ -2270,21 +2306,24 @@ function placePop(el, word, en){
 }
 document.addEventListener("click", async e => {
   const el = e.target.closest(".wd");
-  if (!el) { hidePop(); return; }
+  if (!el) { if (!e.target.closest("#wSheet")) hidePop(); return; }
   hidePop(); el.classList.add("sel");
-  const word = el.textContent, key = norm(word);
-  if (!recording && !listening) { wordTapAt = Date.now(); speak(word, Math.max(0.6, S.rate - 0.15)); }
+  const word = el.textContent, key = norm(word), inNews = !!el.closest("#newsBody");
+  if (!inNews && !recording && !listening) { wordTapAt = Date.now(); speak(word, Math.max(0.6, S.rate - 0.15)); }
   if (el.closest(".t, .nitem")) { const entry = entryFor(String(el.dataset.base || "").replace(/^(der|die|das) /i, "")) || entryFor(word); if (entry) { bump(entry, "k"); persist("stats"); } }
   let en = el.dataset.en || glossCache[key];
   const base = String(el.dataset.base || ""), label = base && base.replace(/^(der|die|das) /i, "").toLowerCase() !== key ? `${word} · ${base}` : base && /^(der|die|das) /i.test(base) ? base : word;
-  if (en) { placePop(el, label, en); return; }
-  placePop(el, word, "…");
+  if (inNews) {
+    newsSheet(word, base, en || "…");
+    if (en) return;
+  } else if (en) { placePop(el, label, en); return; }
+  else placePop(el, word, "…");
   try {
     const sentence = el.closest(".de-text")?.textContent || word;
     const j = parseJSON(await callLLM('You translate one German word for a beginner. Reply ONLY JSON: {"en": "short English meaning as used in the sentence"}', [{ role: "user", content: `Word: ${word}\nSentence: ${sentence}` }]));
     en = String(j.en || "?"); glossCache[key] = en; el.dataset.en = en;
-    if (el.classList.contains("sel")) placePop(el, word, en);
-  } catch { if (el.classList.contains("sel")) placePop(el, word, "Couldn't look this up"); }
+    if (el.classList.contains("sel")) { if (inNews) { if ($("wsEn")) $("wsEn").textContent = en; if (sheetWord) sheetWord.en = en; } else placePop(el, word, en); }
+  } catch { if (el.classList.contains("sel")) { if (inNews) { if ($("wsEn")) $("wsEn").textContent = "Couldn't look this up"; } else placePop(el, word, "Couldn't look this up"); } }
 });
 $("chat").addEventListener("scroll", hidePop, { passive: true });
 
