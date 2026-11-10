@@ -213,6 +213,11 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
 .vbar i{display:block;height:100%;background:var(--accent);transition:width .3s}
 .vcard{background:var(--surface);border:var(--bw) solid var(--line);padding:30px 20px 26px;text-align:center;position:relative}
 .vcard::after{content:"";position:absolute;right:-1px;top:-1px;width:28px;height:28px;background:var(--gold)}
+.vsay{display:inline-flex;align-items:center;gap:8px;margin-top:16px;border:var(--bw) solid var(--line);background:var(--ink);color:var(--bg);padding:9px 16px;font-weight:700;font-size:15px}
+.vsay svg{width:18px;height:18px;flex:none}
+.vsay small{font-weight:500;font-size:12px;opacity:.75}
+.vsay:disabled{background:transparent;color:var(--muted);border-color:var(--soft-line);border-style:dashed;cursor:default}
+.vsay.playing{background:var(--accent);border-color:var(--accent);color:#fff}
 .ven{font-family:var(--f-en);font-style:italic;font-size:38px;line-height:1.15;margin:6px 0 4px;overflow-wrap:anywhere}
 .vres{margin-top:14px;font-size:18px}
 .vres b{font-size:28px;display:block;margin-top:4px;font-weight:700}
@@ -555,6 +560,7 @@ textarea{flex:1;min-width:0;resize:none;font-size:17px;max-height:120px}
         <div class="vword" id="vWord" lang="de" hidden></div>
         <div class="ven" id="vEn"></div>
         <div class="vres" id="vRes" hidden></div>
+        <button class="vsay" id="vSay" disabled aria-label="Hear it pronounced (after you answer)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span id="vSayT">Hear it</span></button>
       </div>
       <div class="vmic" id="vMicRow">
         <button class="orb" id="vMic" aria-label="Say the German word">
@@ -690,7 +696,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.5.1";
+const VERSION = "2.5.2";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -1408,7 +1414,7 @@ $("sendBtn").onclick = send;
 $("input").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 function grow(){ const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }
 $("input").oninput = grow;
-function stopAll(){ loop = false; phoneWant = false; if (recording) stopRecording(false); try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
+function stopAll(){ loop = false; phoneWant = false; if (recording) stopRecording(false); try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} try { natPlayer && natPlayer.pause(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
 
 $("hintBtn").onclick = async () => {
   if (busy || !turns.length) return;
@@ -1763,6 +1769,84 @@ $("wordList").addEventListener("click", e => {
   placePop(b, `${withArt(w)} · ${HEAT[level(t)].label} ${t}° · importance ${importance(w)}`, `${enOf(w) || "meaning not saved yet"} — said ${st.c || 0}× right, ${st.x || 0}× wrong · drill ${st.vo || 0}/${(st.vo || 0) + (st.vm || 0)} · looked up ${st.k || 0}× · last ${ago(st.t)}`);
 });
 
+/* ---------- native pronunciation (Wiktionary / Wikimedia Commons recordings) ---------- */
+// Looks up a recording of a native speaker for the word ("De-Haus.ogg" on Wiktionary). Found links are cached on this phone.
+// No recording, no internet or a format the phone can't play → the phone's German voice instead.
+const NAT_KEY = "nat", natMem = new Map();
+const natCache = () => { const c = store.get(NAT_KEY, {}); return c && typeof c === "object" ? c : {}; };
+function natTimeout(pr, ms){ return Promise.race([pr, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]); }
+async function nativeAudio(word){
+  const w = String(word || "").trim(); if (!w || w.length > 40) return null;
+  if (natMem.has(w)) return natMem.get(w);
+  const c = natCache();
+  if (c[w] !== undefined && (c[w].u || Date.now() - (c[w].at || 0) < 7 * 864e5)) { const r = c[w].u ? c[w] : null; natMem.set(w, r); return r; }
+  const job = (async () => {
+    try {
+      const api = "https://de.wiktionary.org/w/api.php?action=query&prop=images&imlimit=100&redirects=1&format=json&origin=*&titles=" + encodeURIComponent(w);
+      const j = await natTimeout(fetch(api).then(r => r.json()), 5000);
+      const files = Object.values(j?.query?.pages || {}).flatMap(pg => (pg.images || []).map(i => i.title.replace(/^[^:]+:/, "")))
+        .filter(f => /^De-.+\.(ogg|oga|opus|mp3|wav|flac)$/i.test(f));
+      const exact = f => f.replace(/^De-/, "").replace(/\d*\.[a-z0-9]+$/i, "").replace(/_/g, " ").toLowerCase() === w.toLowerCase();
+      const pick = files.find(f => exact(f) && !/^De-(at|ch)-/i.test(f)) || files.find(exact) || files.find(f => !/^De-(at|ch)-/i.test(f)) || null;
+      let out = null;
+      if (pick) {
+        const ci = "https://commons.wikimedia.org/w/api.php?action=query&prop=videoinfo&viprop=url|derivatives&format=json&origin=*&titles=" + encodeURIComponent("File:" + pick);
+        const k = await natTimeout(fetch(ci).then(r => r.json()), 5000);
+        const info = Object.values(k?.query?.pages || {})[0]?.videoinfo?.[0];
+        if (info && info.url) {
+          const mp3 = (info.derivatives || []).find(d => /mpeg|mp3/.test(d.type || "") || /\.mp3$/.test(d.src || ""));
+          const a = document.createElement("audio");
+          const ogg = /\.(ogg|oga|opus)$/i.test(info.url) && (a.canPlayType('audio/ogg; codecs="vorbis"') || a.canPlayType('audio/ogg; codecs="opus"'));
+          const src = ogg || !/\.(ogg|oga|opus)$/i.test(info.url) ? info.url : mp3 ? mp3.src : null;
+          if (src) out = { u: src, f: pick };
+        }
+      }
+      const cc = natCache(); cc[w] = out ? { ...out, at: Date.now() } : { u: "", at: Date.now() };
+      const keys = Object.keys(cc); if (keys.length > 1500) keys.slice(0, keys.length - 1500).forEach(x => delete cc[x]);
+      store.set(NAT_KEY, cc);
+      return out;
+    } catch { return null; }   // offline or blocked: try again next time
+  })();
+  natMem.set(w, job); const r = await job; natMem.set(w, r); return r;
+}
+let natPlayer = null;
+// Plays the native recording if there is one, otherwise the phone's voice. Resolves when it has finished (at most ~6 s).
+function playWord(w, rate){
+  return new Promise(async done => {
+    let fin = false; const end = () => { if (!fin) { fin = true; done(); } };
+    setTimeout(end, 6000);
+    try { speechSynthesis.cancel(); } catch {}
+    try { natPlayer && natPlayer.pause(); } catch {}
+    const n = await nativeAudio(w);
+    if (n && n.u) {
+      try {
+        const a = new Audio(n.u); natPlayer = a;
+        a.onended = end; a.onerror = () => speak(w, rate, end);
+        const pr = a.play(); if (pr && pr.catch) pr.catch(() => speak(w, rate, end));
+        return;
+      } catch {}
+    }
+    speak(w, rate, end);
+  });
+}
+// The speaker button on a Vokabeln card: greyed out until you've answered (or the answer is shown).
+async function vSayReady(w, on){
+  const b = $("vSay"); b.disabled = !on; b.classList.remove("playing");
+  b.setAttribute("aria-label", on ? "Hear it pronounced" : "Hear it pronounced (after you answer)");
+  $("vSayT").innerHTML = "Hear it";
+  if (!on) return;
+  const n = await nativeAudio(w);
+  if (V && V.list[V.i] && (V.list[V.i] === w || (V.list[V.i].intro && V.list[V.i].intro.w === w)) && !b.disabled)
+    $("vSayT").innerHTML = n && n.u ? `Native speaker <small>· Wiktionary</small>` : `Hear it <small>· phone voice</small>`;
+}
+$("vSay").onclick = () => {
+  if (!V) return; const it = V.list[V.i], w = typeof it === "object" ? it.intro.w : it;
+  V.hold = true;   // you want to listen: don't jump to the next word by itself
+  const b = $("vSay"); b.classList.add("playing");
+  playWord(w, Math.max(0.6, S.rate - 0.1)).then(() => b.classList.remove("playing"));
+  if (V.done) { $("vNext").hidden = false; }
+};
+
 /* ---------- Vokabeln: quick drill ---------- */
 function enOf(w){ return (S.en && S.en[w]) || EN[w] || (entryInfo(w) || {}).en || ""; }
 const fold = x => String(x || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
@@ -1811,7 +1895,9 @@ async function startVocab(){
   $("vPlay").hidden = false; $("vDone").hidden = true; vCard();
 }
 function vCard(){
-  const item = V.list[V.i]; V.done = false; V.tries = 0;
+  const item = V.list[V.i]; V.done = false; V.tries = 0; V.hold = false;
+  const cw = typeof item === "object" ? item.intro.w : item; vSayReady(cw, false); nativeAudio(cw);
+  const nx = V.list[V.i + 1]; if (nx) nativeAudio(typeof nx === "object" ? nx.intro.w : nx);
   $("vProg").textContent = `${V.i + 1} / ${V.list.length}`; $("vScore").textContent = `${V.ok} richtig`;
   $("vBarFill").style.width = (V.i / V.list.length * 100) + "%";
   $("vRes").hidden = true; $("vType").value = ""; $("vMic").className = "orb";
@@ -1825,7 +1911,7 @@ function vCard(){
     $("vWord").innerHTML = `${b.art ? `<i>${esc(b.art)}</i>` : ""}${esc(b.w)}`; $("vEn").textContent = b.en;
     addWords([b.w]); if (!bankOf(b.w) && !S.en[b.w]) { S.en[b.w] = b.en; persist("en"); }
     $("vShow").hidden = true; $("vNext").hidden = false; $("vNext").textContent = "Got it";
-    V.done = true; speak(b.w, Math.max(0.6, S.rate - 0.1));
+    V.done = true; vSayReady(b.w, true); playWord(b.w, Math.max(0.6, S.rate - 0.1));
     return;
   }
   $("vLabel").textContent = "Say it in German"; $("vNext").textContent = "Next";
@@ -1841,8 +1927,8 @@ function vRetry(alts){
   const st = stat(w); st.vf = (st.vf || 0) + 1; persist("stats");   // counted, but no warmth and no "last used" refresh
   const r = $("vRes"); r.className = "vres fixed";
   r.innerHTML = `Corrected<b lang="de">${esc(w)}</b><small>Well done. Get it right first time in a later round to warm it up.</small>`;
-  $("vType").value = ""; setVPhase("Jetzt richtig!", ""); speak(w);
-  setTimeout(() => { if (V && V.done && V.list[V.i] === w && current === "vocab") vNext(); }, 2200);
+  $("vType").value = ""; setVPhase("Jetzt richtig!", "");
+  playWord(w).then(() => setTimeout(() => { if (V && V.done && !V.hold && V.list[V.i] === w && current === "vocab") vNext(); }, 1000));
 }
 // How close an answer is: 1 = the same word, 0 = nothing alike (letters folded, article ignored).
 function closeness(said, target){
@@ -1883,8 +1969,9 @@ function vResult(ok, said){
   $("vScore").textContent = `${V.ok} richtig`; $("vShow").hidden = true; $("vNext").hidden = false; $("vMic").className = "orb";
   setVPhase(ok ? "Gut gemacht" : "Listen and repeat", ok ? "" : "Say it or type it once more.");
   if (!ok) $("vType").value = "";
-  speak(w, Math.max(0.6, S.rate - 0.1));
-  if (ok) setTimeout(() => { if (V && V.done && V.list[V.i] === w && current === "vocab") vNext(); }, 1600);
+  vSayReady(w, true);
+  const play = playWord(w, Math.max(0.6, S.rate - 0.1));
+  if (ok) play.then(() => setTimeout(() => { if (V && V.done && !V.hold && V.list[V.i] === w && current === "vocab") vNext(); }, 1000));
 }
 function vNext(){
   V.i++;
