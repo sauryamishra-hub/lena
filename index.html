@@ -707,7 +707,7 @@ const SCENES = [
   {de:"Im Hotel", en:"At the hotel", brief:"You are at the hotel reception helping the learner."}
 ];
 
-const VERSION = "2.5.3";
+const VERSION = "2.5.4";
 /* ---------- light / dark theme ---------- */
 function applyTheme(t){
   const root = document.documentElement;
@@ -935,7 +935,7 @@ function renderHome(){
   renderHeat("heatBar", "heatLegend");
   renderGoal("goalBox");
   const cg = currentGoal(); $("goal1").textContent = `Ziel ${cg.g.id} · ${cg.st.learned} / ${cg.st.total}`;
-  renderAchCount(); renderTime();
+  renderAchCount(); renderTime(); widgetSoon();
   $("goal1").textContent += ` · ${Math.round(timeStats().today / 60)} min today`;
 }
 $("scenes").innerHTML = SCENES.map((s,i) => `<button class="scene" data-i="${i}"><span class="de" lang="de">${esc(s.de)}</span><span class="en">${esc(s.en)}</span></button>`).join("");
@@ -1001,18 +1001,45 @@ function germanVoice(){ return voices.find(v => v.voiceURI === S.voice) || voice
 let unlocked = false;
 function unlockAudio(){ if (unlocked || !("speechSynthesis" in window)) return; unlocked = true; try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch {} }
 document.addEventListener("pointerdown", unlockAudio, { once: true });
+// Speaking is made robust against Android Chrome's speech hiccups: a short pause after cancelling (speaking straight
+// after cancel() is often dropped), resume() if speech got stuck paused, and one retry if nothing starts within ~2 s.
+// Each call gets a number, so a stopped or replaced line never finishes or speaks late.
+let speakSeq = 0;
+function stopSpeak(){ speakSeq++; try { speechSynthesis.cancel(); } catch {} releaseNative(); }
+function releaseNative(){ try { if (typeof natPlayer !== "undefined" && natPlayer) { natPlayer.pause(); natPlayer.removeAttribute("src"); natPlayer.load(); natPlayer = null; } } catch {} }
 function speak(text, rate, onEnd){
-  if (!("speechSynthesis" in window) || !text) { onEnd && onEnd(); return; }
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text).replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " "));
-    u.lang = "de-DE"; u.rate = rate || S.rate;
-    const v = germanVoice(); if (v) u.voice = v;
-    let done = false; const fin = () => { if (!done) { done = true; onEnd && onEnd(); } };
-    u.onend = fin; u.onerror = fin;
-    speechSynthesis.speak(u);
-  } catch { onEnd && onEnd(); }
+  const fin0 = () => { onEnd && onEnd(); };
+  if (!("speechSynthesis" in window) || !text) { fin0(); return; }
+  const seq = ++speakSeq, clean = String(text).replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+  if (!clean) { fin0(); return; }
+  let done = false, started = false, tries = 0, wd = null;
+  const fin = () => { if (done) return; done = true; clearTimeout(wd); onEnd && onEnd(); };
+  releaseNative();
+  try { const ss = speechSynthesis; if (ss.speaking || ss.pending) ss.cancel(); if (ss.paused) ss.resume(); } catch {}
+  const go = () => {
+    if (seq !== speakSeq) { fin(); return; }   // replaced by a newer line or stopped
+    try {
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = "de-DE"; u.rate = rate || S.rate;
+      const v = germanVoice(); if (v) u.voice = v;
+      const mine = tries;
+      u.onstart = () => { started = true; };
+      u.onend = () => { if (mine === tries) fin(); };
+      u.onerror = () => { if (mine === tries) fin(); };
+      speechSynthesis.speak(u);
+      if (speechSynthesis.paused) speechSynthesis.resume();
+      clearTimeout(wd);
+      wd = setTimeout(() => {
+        if (done || started || seq !== speakSeq) return;
+        if (speechSynthesis.speaking && !speechSynthesis.paused) return;   // it is talking, just without a start event
+        if (tries++ < 1) { try { speechSynthesis.cancel(); speechSynthesis.resume(); } catch {} setTimeout(go, 120); } else fin();
+      }, 2000);
+    } catch { fin(); }
+  };
+  setTimeout(go, 60);
 }
+// Speech sometimes stays stuck after the app was in the background; give it a nudge when Lena comes back.
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { try { if (speechSynthesis.paused) speechSynthesis.resume(); } catch {} } });
 
 /* ---------- voice in ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1031,7 +1058,7 @@ $("orbBtn").onclick = () => {
   if (retry && !listening && !recording && !busy && retryLast()) return;
   if (recording) { stopRecording(true); return; }
   if (listening) { stopPhone(); return; }
-  if (phase === "speaking") { try { speechSynthesis.cancel(); } catch {} }
+  if (phase === "speaking") { stopSpeak(); }
   loop = true; startListening();
 };
 // Two ways to hear the learner: Lena's AI listens to the recording (best for accents and German mixed with English),
@@ -1047,7 +1074,7 @@ const clock = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60)
 let recording = false, mrec = null, mstream = null, mchunks = [], mstart = 0, mtimer = null, mctx = null, mpeak = 0;
 async function startRecording(){
   recording = true; mpeak = 0;
-  try { speechSynthesis.cancel(); } catch {}
+  stopSpeak();
   try { mstream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
   catch { recording = false; setPhase("paused", "Allow the microphone for this site in Chrome, then tap again."); return; }
   if (!recording) { mstream.getTracks().forEach(t => t.stop()); return; }
@@ -1083,7 +1110,7 @@ function stopRecording(sendIt){
 }
 // Phone speech recognition, kept running through pauses until the learner taps.
 let phoneWant = false, phoneTapped = false, phoneBase = "", phoneIdle = 0;
-function startPhone(){ phoneWant = true; phoneTapped = false; phoneBase = $("input").value.trim(); phoneIdle = Date.now(); try { speechSynthesis.cancel(); } catch {} runPhone(); }
+function startPhone(){ phoneWant = true; phoneTapped = false; phoneBase = $("input").value.trim(); phoneIdle = Date.now(); stopSpeak(); runPhone(); }
 function mergeFinal(acc, r){ const a = acc.trim(), b = String(r).trim(); if (!a) return b; if (b.toLowerCase().startsWith(a.toLowerCase())) return b; return a + " " + b; }
 function runPhone(){
   rec = new SR(); rec.lang = "de-DE"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
@@ -1425,7 +1452,7 @@ $("sendBtn").onclick = send;
 $("input").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 function grow(){ const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }
 $("input").oninput = grow;
-function stopAll(){ loop = false; phoneWant = false; if (recording) stopRecording(false); try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} try { natPlayer && natPlayer.pause(); } catch {} listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
+function stopAll(){ loop = false; phoneWant = false; if (recording) stopRecording(false); try { vrec?.abort(); } catch {} try { ctl?.abort(); } catch {} try { rec?.abort(); } catch {} stopSpeak(); listening = false; $("micBtn").classList.remove("live"); setStatus(""); }
 
 $("hintBtn").onclick = async () => {
   if (busy || !turns.length) return;
@@ -1825,15 +1852,16 @@ let natPlayer = null;
 function playWord(w, rate){
   return new Promise(async done => {
     let fin = false; const end = () => { if (!fin) { fin = true; done(); } };
-    setTimeout(end, 6000);
-    try { speechSynthesis.cancel(); } catch {}
-    try { natPlayer && natPlayer.pause(); } catch {}
+    setTimeout(() => { releaseNative(); end(); }, 6000);
+    stopSpeak();
+    const seq = speakSeq;
     const n = await nativeAudio(w);
+    if (seq !== speakSeq) { end(); return; }
     if (n && n.u) {
       try {
         const a = new Audio(n.u); natPlayer = a;
-        a.onended = end; a.onerror = () => speak(w, rate, end);
-        const pr = a.play(); if (pr && pr.catch) pr.catch(() => speak(w, rate, end));
+        a.onended = () => { releaseNative(); end(); }; a.onerror = () => { releaseNative(); speak(w, rate, end); };
+        const pr = a.play(); if (pr && pr.catch) pr.catch(() => { releaseNative(); speak(w, rate, end); });
         return;
       } catch {}
     }
@@ -1994,14 +2022,14 @@ function vNext(){
     <p class="lead" style="margin-top:-6px"><b>Ziel ${cg.g.id}:</b> ${cg.st.learned} of ${cg.st.total} learned · ${cg.st.started} started</p>
     <div class="card vlist">${V.res.map(r => `<div><span lang="de">${esc(r.w)}</span><span>${esc(enOf(r.w))} ${r.ok ? (r.tries > 1 ? `<span class="vfix">✓ ${["", "", "2nd", "3rd", "4th", "5th"][r.tries]} try</span>` : "✓") : r.fixed ? `<span class="vfix">corrected ✓</span>` : "✗"}</span></div>`).join("")}</div>
     <div class="links"><button class="send" id="vAgain">Another round</button><button class="ghost" id="vHome">Home</button></div>`;
-  $("vAgain").onclick = startVocab; $("vHome").onclick = () => show("home");
+  $("vAgain").onclick = () => { syncWidgetByLink(); startVocab(); }; $("vHome").onclick = () => { show("home"); syncWidgetByLink(); };
 }
 $("vMic").onclick = () => {
   unlockAudio(); if (!V) return;
   if (vListening) { try { vrec.stop(); } catch {} return; }
   if (!SR) { setVPhase("Type your answer", "Speech input needs Chrome."); return; }
   if (V.done && !$("vRes").classList.contains("no")) return;
-  try { speechSynthesis.cancel(); } catch {}
+  stopSpeak();
   const retry = V.done; let got = false;
   vrec = new SR(); vrec.lang = "de-DE"; vrec.interimResults = false; vrec.maxAlternatives = 5;
   vrec.onresult = e => { got = true; const alts = [...e.results[0]].map(a => a.transcript);
@@ -2367,6 +2395,7 @@ async function onUser(u){
     seedWords();
     if (!d || !takeServer || (!d.key && S.key)) syncNow();
     show("home");
+    sendWidget();   // the widget gets the account's numbers, not what this phone had before sign-in
   } catch (e) {
     if (e && e.code === "permission-denied") gate(`${u.email} isn't on Lena's invite list yet. Ask Saurya to invite this address.`, { other: true });
     else gate("Couldn't reach your account. Check your internet and try again.", { other: true });
